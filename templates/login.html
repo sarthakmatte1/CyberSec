@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sign In — Recruitment Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    padding: 2rem; background: #04102a;
+    font-family: 'DM Sans', sans-serif; position: relative; overflow: hidden;
+  }
+
+  .rp-grid {
+    position: fixed; inset: 0; pointer-events: none;
+    background-image:
+      linear-gradient(rgba(55,138,221,0.07) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(55,138,221,0.07) 1px, transparent 1px);
+    background-size: 48px 48px;
+  }
+  .rp-glow  { position: fixed; width: 520px; height: 520px; border-radius: 50%; background: radial-gradient(circle, rgba(24,95,165,0.22) 0%, transparent 70%); top: -120px; right: -100px; pointer-events: none; }
+  .rp-glow2 { position: fixed; width: 400px; height: 400px; border-radius: 50%; background: radial-gradient(circle, rgba(15,110,86,0.18) 0%, transparent 70%); bottom: -80px; left: -80px; pointer-events: none; }
+
+  .rp-card {
+    position: relative; background: rgba(10,24,54,0.88);
+    border: 1px solid rgba(55,138,221,0.2); border-radius: 20px;
+    padding: 2.75rem 2.5rem 2.25rem; width: 100%; max-width: 420px;
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 0 80px rgba(24,95,165,0.15), inset 0 1px 0 rgba(255,255,255,0.05);
+  }
+
+  .rp-header { display: flex; align-items: center; gap: 12px; margin-bottom: 0.4rem; }
+
+  .rp-icon {
+    width: 40px; height: 40px; border-radius: 11px;
+    background: linear-gradient(135deg, #185FA5, #378ADD);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+
+  .rp-title { font-family: 'DM Serif Display', serif; font-size: 26px; color: #e8f0fe; letter-spacing: -0.01em; }
+
+  .rp-sub { font-size: 13px; color: rgba(180,195,230,0.55); margin-bottom: 1.75rem; font-weight: 300; }
+
+  .rp-divider { height: 1px; background: rgba(55,138,221,0.12); margin-bottom: 1.5rem; }
+
+  .flash {
+    display: flex; align-items: center; gap: 8px; padding: 10px 14px;
+    border-radius: 10px; font-size: 13.5px; margin-bottom: 1rem;
+    background: rgba(162,45,45,0.15); border: 1px solid rgba(224,75,74,0.3); color: #F09595;
+  }
+
+  .rp-field { margin-bottom: 1.1rem; }
+
+  label {
+    display: block; font-size: 12px; font-weight: 500;
+    color: rgba(180,200,240,0.65); letter-spacing: 0.06em;
+    text-transform: uppercase; margin-bottom: 7px;
+  }
+
+  input[type="text"], input[type="password"] {
+    width: 100%; padding: 12px 14px;
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(55,138,221,0.2);
+    border-radius: 10px; font-size: 14.5px; font-family: 'DM Sans', sans-serif;
+    color: #e8f0fe; transition: border-color 0.2s, background 0.2s; outline: none;
+  }
+  input::placeholder { color: rgba(150,175,220,0.3); }
+  input:focus { border-color: rgba(55,138,221,0.55); background: rgba(55,138,221,0.06); }
+
+  /* CAPTCHA row */
+  .captcha-row { display: flex; gap: 10px; align-items: flex-end; }
+  .captcha-row .rp-field { flex: 1; margin-bottom: 0; }
+  .captcha-badge {
+    flex-shrink: 0; padding: 12px 18px;
+    background: rgba(24,95,165,0.18); border: 1px solid rgba(55,138,221,0.3);
+    border-radius: 10px; font-size: 17px; font-weight: 500;
+    color: #85B7EB; letter-spacing: 0.08em; white-space: nowrap;
+    font-family: 'DM Serif Display', serif;
+  }
+
+  .rp-btn {
+    width: 100%; padding: 13px 20px;
+    background: linear-gradient(135deg, #185FA5, #378ADD); color: #fff;
+    border: none; border-radius: 11px; font-size: 15px; font-weight: 500;
+    font-family: 'DM Sans', sans-serif; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    margin-top: 1.5rem; box-shadow: 0 4px 20px rgba(24,95,165,0.4);
+    transition: transform 0.2s, box-shadow 0.2s; letter-spacing: 0.01em;
+  }
+  .rp-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 28px rgba(24,95,165,0.55); }
+
+  .rp-links {
+    display: flex; align-items: center; justify-content: center;
+    flex-wrap: wrap; gap: 8px 16px; margin-top: 1.5rem;
+    padding-top: 1.25rem; border-top: 1px solid rgba(55,138,221,0.1);
+  }
+  .rp-links a { font-size: 13px; color: rgba(133,183,235,0.65); text-decoration: none; transition: color 0.2s; }
+  .rp-links a:hover { color: #85B7EB; }
+  .rp-sep { color: rgba(55,138,221,0.25); }
+
+  /* Rate-limit notice */
+  .rate-notice {
+    display: flex; align-items: center; gap: 6px; margin-top: 1rem;
+    font-size: 11.5px; color: rgba(150,175,220,0.35); justify-content: center;
+  }
+</style>
+</head>
+<body>
+  <div class="rp-grid"></div>
+  <div class="rp-glow"></div>
+  <div class="rp-glow2"></div>
+
+  <div class="rp-card">
+    <div class="rp-header">
+      <div class="rp-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <path d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.35C16.5 22.15 20 17.25 20 12V6L12 2z"
+                fill="rgba(255,255,255,0.15)" stroke="white" stroke-width="1.5" stroke-linejoin="round"/>
+          <path d="M9 12l2 2 4-4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <h1 class="rp-title">Sign In</h1>
+    </div>
+    <p class="rp-sub">Secure access to the Recruitment Portal</p>
+    <div class="rp-divider"></div>
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}{% for msg in messages %}
+        <div class="flash">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/>
+            <path d="M12 8v4M12 16h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          {{ msg }}
+        </div>
+      {% endfor %}{% endif %}
+    {% endwith %}
+
+    <form method="POST" action="/login">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div class="rp-field">
+        <label for="login-email">Email Address</label>
+        <input type="text" id="login-email" name="email" placeholder="you@example.com" required maxlength="254" autocomplete="email">
+      </div>
+
+      <div class="rp-field">
+        <label for="login-password">Password</label>
+        <input type="password" id="login-password" name="password" placeholder="Your password" required autocomplete="current-password">
+      </div>
+
+      <div class="rp-field">
+        <label>Anti-Bot Verification</label>
+        <div class="captcha-row">
+          <div class="rp-field">
+            <input type="text" name="captcha" placeholder="Answer" required maxlength="10" inputmode="numeric" autocomplete="off">
+          </div>
+          <div class="captcha-badge">{{ captcha_question }} = ?</div>
+        </div>
+      </div>
+
+      <button type="submit" class="rp-btn">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+          <rect x="3" y="11" width="18" height="11" rx="2" stroke="white" stroke-width="1.8"/>
+          <path d="M7 11V7a5 5 0 0110 0v4" stroke="white" stroke-width="1.8"/>
+        </svg>
+        Sign In Securely
+      </button>
+    </form>
+
+    <div class="rp-links">
+      <a href="/forgot_password">Forgot password?</a>
+      <span class="rp-sep">·</span>
+      <a href="/register">Create candidate account</a>
+    </div>
+
+    <div class="rate-notice">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/>
+        <path d="M12 8v4M12 16h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      Limited to 5 attempts per minute · Auto-lockout after 5 failures
+    </div>
+  </div>
+</body>
+</html>

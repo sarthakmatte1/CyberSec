@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Employer — Recruitment Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #04102a; --card: rgba(10,24,54,0.85); --border: rgba(55,138,221,0.18);
+    --blue: #378ADD; --blue-dark: #185FA5; --green: #1D9E75; --green-light: #5DCAA5;
+    --text: #e8f0fe; --muted: rgba(180,195,230,0.6);
+    --red: #e05c5c; --amber: #EF9F27;
+  }
+
+  body { min-height: 100vh; background: var(--bg); font-family: 'DM Sans', sans-serif; color: var(--text); overflow-x: hidden; }
+  .bg-grid { position: fixed; inset: 0; pointer-events: none; background-image: linear-gradient(rgba(55,138,221,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(55,138,221,0.06) 1px, transparent 1px); background-size: 48px 48px; }
+  .bg-glow1 { position: fixed; width: 500px; height: 500px; border-radius: 50%; background: radial-gradient(circle, rgba(24,95,165,0.18) 0%, transparent 70%); top: -100px; right: -80px; pointer-events: none; }
+  .bg-glow2 { position: fixed; width: 380px; height: 380px; border-radius: 50%; background: radial-gradient(circle, rgba(15,110,86,0.14) 0%, transparent 70%); bottom: -60px; left: -60px; pointer-events: none; }
+
+  .wrap { position: relative; z-index: 1; max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+
+  /* Topbar */
+  .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2.5rem; padding-bottom: 1.25rem; border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 1rem; }
+  .logo { display: flex; align-items: center; gap: 12px; }
+  .logo-icon { width: 38px; height: 38px; border-radius: 10px; background: linear-gradient(135deg, var(--blue-dark), var(--blue)); display: flex; align-items: center; justify-content: center; }
+  .logo-text { font-family: 'DM Serif Display', serif; font-size: 19px; color: var(--text); line-height: 1.1; }
+  .logo-text span { display: block; font-family: 'DM Sans', sans-serif; font-size: 12px; color: var(--muted); font-weight: 300; }
+  .topbar-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+  .badge { display: inline-flex; align-items: center; gap: 5px; padding: 5px 13px; border-radius: 100px; font-size: 11px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; }
+  .badge-amber { background: rgba(239,159,39,0.12); border: 1px solid rgba(239,159,39,0.3); color: var(--amber); }
+
+  .btn { display: inline-flex; align-items: center; gap: 7px; padding: 8px 16px; border-radius: 9px; font-size: 13px; font-weight: 500; font-family: 'DM Sans', sans-serif; text-decoration: none; border: none; cursor: pointer; transition: transform 0.2s, background 0.2s; }
+  .btn-ghost { background: rgba(55,138,221,0.08); color: var(--muted); border: 1px solid var(--border); }
+  .btn-ghost:hover { background: rgba(55,138,221,0.15); color: var(--text); transform: translateY(-1px); }
+  .btn-green { background: rgba(29,158,117,0.12); color: var(--green-light); border: 1px solid rgba(29,158,117,0.3); }
+  .btn-green:hover { background: rgba(29,158,117,0.22); transform: translateY(-1px); }
+  .btn-danger { background: rgba(224,92,92,0.1); color: #f08080; border: 1px solid rgba(224,92,92,0.28); }
+  .btn-danger:hover { background: rgba(224,92,92,0.2); transform: translateY(-1px); }
+  .btn-sm { padding: 6px 13px; font-size: 12px; }
+
+  /* Flash */
+  .flash { display: flex; align-items: center; gap: 8px; padding: 11px 15px; border-radius: 10px; font-size: 13.5px; margin-bottom: 1.5rem; }
+  .flash-ok  { background: rgba(29,158,117,0.1); border: 1px solid rgba(29,158,117,0.3); color: var(--green-light); }
+  .flash-err { background: rgba(224,92,92,0.1); border: 1px solid rgba(224,92,92,0.28); color: #f08080; }
+
+  /* Company hero */
+  .company-hero {
+    background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+    padding: 1.75rem 2rem; margin-bottom: 2rem; backdrop-filter: blur(10px);
+    display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+  .company-avatar {
+    width: 54px; height: 54px; border-radius: 14px; flex-shrink: 0;
+    background: linear-gradient(135deg, rgba(239,159,39,0.25), rgba(24,95,165,0.25));
+    border: 1px solid rgba(239,159,39,0.25);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .company-info h2 { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--text); }
+  .company-info p { font-size: 13px; color: var(--muted); margin-top: 3px; font-weight: 300; }
+
+  /* Stats */
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 2rem; }
+  @media (max-width: 580px) { .stats { grid-template-columns: 1fr 1fr; } }
+  .stat-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 1.25rem 1.5rem; backdrop-filter: blur(10px); }
+  .stat-num { font-family: 'DM Serif Display', serif; font-size: 26px; color: var(--text); }
+  .stat-label { font-size: 11.5px; color: var(--muted); margin-top: 3px; text-transform: uppercase; letter-spacing: 0.05em; }
+
+  /* Panel */
+  .panel { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 1.75rem 2rem; margin-bottom: 2rem; backdrop-filter: blur(10px); box-shadow: inset 0 1px 0 rgba(255,255,255,0.03); animation: fadeUp 0.4s ease both; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+
+  .panel-title { font-family: 'DM Serif Display', serif; font-size: 18px; color: var(--text); margin-bottom: 1.25rem; display: flex; align-items: center; gap: 8px; }
+
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+  @media (max-width: 580px) { .form-grid { grid-template-columns: 1fr; } }
+  .form-field { display: flex; flex-direction: column; gap: 6px; }
+  .form-field.span2 { grid-column: 1 / -1; }
+  label { font-size: 11px; font-weight: 500; letter-spacing: 0.07em; text-transform: uppercase; color: rgba(150,170,220,0.6); }
+  input[type="text"], textarea {
+    background: rgba(4,16,42,0.6); border: 1px solid rgba(55,138,221,0.2); border-radius: 10px;
+    padding: 11px 14px; font-size: 14px; font-family: 'DM Sans', sans-serif; color: var(--text); outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s; width: 100%;
+  }
+  input::placeholder, textarea::placeholder { color: rgba(150,170,220,0.35); }
+  input:focus, textarea:focus { border-color: rgba(55,138,221,0.5); box-shadow: 0 0 0 3px rgba(55,138,221,0.1); }
+  textarea { resize: vertical; min-height: 90px; }
+  .form-actions { display: flex; justify-content: flex-end; margin-top: 4px; }
+  .btn-submit { display: inline-flex; align-items: center; gap: 7px; padding: 10px 20px; background: linear-gradient(135deg, var(--blue-dark), var(--blue)); color: #fff; border: none; border-radius: 10px; font-size: 14px; font-weight: 500; font-family: 'DM Sans', sans-serif; cursor: pointer; box-shadow: 0 3px 14px rgba(24,95,165,0.35); transition: transform 0.2s, box-shadow 0.2s; }
+  .btn-submit:hover { transform: translateY(-1px); box-shadow: 0 5px 22px rgba(24,95,165,0.5); }
+
+  /* Jobs list */
+  .section-hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; }
+  .section-hd h2 { font-family: 'DM Serif Display', serif; font-size: 20px; color: var(--text); }
+  .count-pill { background: rgba(55,138,221,0.1); border: 1px solid rgba(55,138,221,0.2); border-radius: 100px; padding: 2px 10px; font-size: 11px; color: var(--blue); }
+
+  .jobs-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 2rem; }
+  .job-row {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 1rem 1.25rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;
+    transition: border-color 0.2s; animation: fadeUp 0.35s ease both;
+  }
+  .job-row:hover { border-color: rgba(55,138,221,0.35); }
+  .job-title-text { font-size: 15px; font-weight: 500; color: var(--text); }
+  .job-meta-text { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+  /* Applications table */
+  .app-table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  thead th { font-size: 11px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border); }
+  tbody td { padding: 12px 14px; font-size: 13.5px; color: rgba(210,225,250,0.85); border-bottom: 1px solid rgba(55,138,221,0.08); vertical-align: middle; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover td { background: rgba(55,138,221,0.04); }
+
+  .status-pill { display: inline-flex; align-items: center; gap: 5px; padding: 4px 11px; border-radius: 100px; font-size: 11px; font-weight: 500; white-space: nowrap; }
+  .status-applied     { background: rgba(55,138,221,0.12); border: 1px solid rgba(55,138,221,0.28); color: var(--blue); }
+  .status-shortlisted { background: rgba(29,158,117,0.12); border: 1px solid rgba(29,158,117,0.28); color: var(--green-light); }
+  .status-rejected    { background: rgba(224,92,92,0.1); border: 1px solid rgba(224,92,92,0.25); color: #f08080; }
+
+  .actions { display: flex; gap: 6px; flex-wrap: wrap; }
+
+  .empty { text-align: center; padding: 3rem 2rem; color: var(--muted); }
+  .empty svg { opacity: 0.2; margin-bottom: 0.75rem; }
+  .empty p { font-size: 13.5px; font-weight: 300; }
+</style>
+</head>
+<body>
+  <div class="bg-grid"></div>
+  <div class="bg-glow1"></div>
+  <div class="bg-glow2"></div>
+
+  <div class="wrap">
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}{% for msg in messages %}
+        <div class="flash {% if 'success' in msg.lower() or 'posted' in msg.lower() or 'shortlisted' in msg.lower() %}flash-ok{% else %}flash-err{% endif %}">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+            <path d="M9 12l2 2 4-4M12 3l7 3v5c0 4.5-3 8.5-7 10C8 19.5 5 15.5 5 11V6l7-3z" stroke="currentColor" stroke-width="2"/>
+          </svg>
+          {{ msg }}
+        </div>
+      {% endfor %}{% endif %}
+    {% endwith %}
+
+    <!-- Topbar -->
+    <div class="topbar">
+      <div class="logo">
+        <div class="logo-icon">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.35C16.5 22.15 20 17.25 20 12V6L12 2z" fill="rgba(255,255,255,0.15)" stroke="white" stroke-width="1.5" stroke-linejoin="round"/>
+            <path d="M9 12l2 2 4-4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="logo-text">Recruitment Portal <span>Employer Dashboard</span></div>
+      </div>
+      <div class="topbar-right">
+        <span class="badge badge-amber">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none"><rect x="2" y="7" width="20" height="14" rx="2" stroke="currentColor" stroke-width="2"/><path d="M16 7V5a2 2 0 00-4 0v2M8 7V5a2 2 0 00-4 0v2" stroke="currentColor" stroke-width="2"/></svg>
+          Employer
+        </span>
+        <a href="/logout" class="btn btn-ghost">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+            <path d="M17 16l4-4-4-4M21 12H9M13 5H5a1 1 0 00-1 1v12a1 1 0 001 1h8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Logout
+        </a>
+      </div>
+    </div>
+
+    <!-- Company hero -->
+    <div class="company-hero">
+      <div class="company-avatar">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+          <path d="M3 21V7a2 2 0 012-2h14a2 2 0 012 2v14" stroke="#EF9F27" stroke-width="1.5" stroke-linecap="round"/>
+          <path d="M9 21v-6h6v6" stroke="#EF9F27" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <rect x="9" y="9" width="2" height="2" rx="0.5" fill="#EF9F27"/>
+          <rect x="13" y="9" width="2" height="2" rx="0.5" fill="#EF9F27"/>
+        </svg>
+      </div>
+      <div class="company-info">
+        <h2>{{ company }}</h2>
+        <p>Logged in as {{ name }} · Employer account</p>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats">
+      <div class="stat-card">
+        <div class="stat-num">{{ jobs | length }}</div>
+        <div class="stat-label">Jobs Posted</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num">{{ applications | length }}</div>
+        <div class="stat-label">Applications</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" style="color: var(--green-light);">{{ applications | selectattr('status', 'equalto', 'Shortlisted') | list | length }}</div>
+        <div class="stat-label">Shortlisted</div>
+      </div>
+    </div>
+
+    <!-- Post a Job -->
+    <div class="panel">
+      <div class="panel-title">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+          <rect x="3" y="7" width="18" height="14" rx="2" stroke="currentColor" stroke-width="1.6"/>
+          <path d="M8 7V5a4 4 0 018 0v2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+          <path d="M12 12v4M10 14h4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+        </svg>
+        Post a New Job
+      </div>
+      <form method="POST" action="/add_job">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <!-- Company is injected server-side from user profile — not editable -->
+        <div class="form-grid">
+          <div class="form-field">
+            <label>Job Title</label>
+            <input type="text" name="title" placeholder="e.g. Senior Frontend Engineer" required maxlength="200">
+          </div>
+          <div class="form-field">
+            <label>Salary / Package</label>
+            <input type="text" name="salary" placeholder="e.g. ₹15–20 LPA" maxlength="50">
+          </div>
+          <div class="form-field span2">
+            <label>Job Description</label>
+            <textarea name="description" placeholder="Describe responsibilities, skills required, and any other details…" maxlength="2000"></textarea>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn-submit">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+              <path d="M12 5v14M5 12h14" stroke="white" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            Post Job
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- My Jobs -->
+    <div class="section-hd">
+      <h2>My Job Listings</h2>
+      <span class="count-pill">{{ jobs | length }}</span>
+    </div>
+
+    {% if jobs %}
+    <div class="jobs-list">
+      {% for job in jobs %}
+      <div class="job-row" style="animation-delay: {{ loop.index0 * 0.05 }}s">
+        <div>
+          <div class="job-title-text">{{ job.title }}</div>
+          <div class="job-meta-text">{{ job.salary or 'Salary not specified' }}</div>
+        </div>
+        <span style="font-size: 12px; color: var(--muted);">{{ job.description[:60] }}{% if job.description | length > 60 %}…{% endif %}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty" style="margin-bottom: 2rem;">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none"><rect x="3" y="7" width="18" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M8 7V5a4 4 0 018 0v2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <p>No jobs posted yet. Use the form above to post your first listing.</p>
+    </div>
+    {% endif %}
+
+    <!-- Applications to my Jobs -->
+    <div class="section-hd">
+      <h2>Applications Received</h2>
+      <span class="count-pill">{{ applications | length }}</span>
+    </div>
+
+    <div class="panel" style="padding: 0; overflow: hidden;">
+      {% if applications %}
+      <div class="app-table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Candidate</th>
+              <th>Job</th>
+              <th>Resume</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for app in applications %}
+            <tr>
+              <td>
+                <div style="font-weight: 500; color: var(--text);">{{ app.user_name }}</div>
+                <div style="font-size: 12px; color: var(--muted);">{{ app.user_email }}</div>
+              </td>
+              <td>{{ app.job_title }}</td>
+              <td>
+                <span style="font-size: 12px; color: var(--muted); font-family: monospace;">{{ app.resume }}</span>
+              </td>
+              <td>
+                <span class="status-pill status-{{ app.status | lower }}">
+                  {{ app.status }}
+                </span>
+              </td>
+              <td>
+                <div class="actions">
+                  {% if app.status != 'Shortlisted' %}
+                  <a href="/employer/shortlist/{{ app._id }}" class="btn btn-green btn-sm">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                    Shortlist
+                  </a>
+                  {% endif %}
+                  {% if app.status != 'Rejected' %}
+                  <a href="/employer/reject/{{ app._id }}" class="btn btn-danger btn-sm">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                    Reject
+                  </a>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="1.5"/></svg>
+        <p>No applications yet. Applications will appear here when candidates apply to your jobs.</p>
+      </div>
+      {% endif %}
+    </div>
+
+  </div>
+</body>
+</html>

@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jobs — Recruitment Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --blue-deep:   #04102a;
+    --blue-mid:    #0a1836;
+    --blue-accent: #185FA5;
+    --blue-light:  #378ADD;
+    --green-accent:#1D9E75;
+    --green-light: #5DCAA5;
+    --text-primary:#e8f0fe;
+    --text-muted:  rgba(180,195,230,0.65);
+    --border:      rgba(55,138,221,0.18);
+    --card-bg:     rgba(10,24,54,0.85);
+    --red-accent:  #e05c5c;
+  }
+
+  body {
+    min-height: 100vh;
+    background: var(--blue-deep);
+    font-family: 'DM Sans', sans-serif;
+    color: var(--text-primary);
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  /* ── Background decorations ── */
+  .bg-grid {
+    position: fixed; inset: 0; pointer-events: none;
+    background-image:
+      linear-gradient(rgba(55,138,221,0.07) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(55,138,221,0.07) 1px, transparent 1px);
+    background-size: 48px 48px;
+    z-index: 0;
+  }
+  .bg-glow1 {
+    position: fixed; width: 520px; height: 520px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(24,95,165,0.2) 0%, transparent 70%);
+    top: -120px; right: -100px; pointer-events: none; z-index: 0;
+  }
+  .bg-glow2 {
+    position: fixed; width: 400px; height: 400px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(15,110,86,0.15) 0%, transparent 70%);
+    bottom: -80px; left: -80px; pointer-events: none; z-index: 0;
+  }
+
+  /* ── Layout ── */
+  .page-wrap {
+    position: relative; z-index: 1;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 4rem;
+  }
+
+  /* ── Flash messages ── */
+  .flash-banner {
+    background: rgba(29,158,117,0.12);
+    border: 1px solid rgba(29,158,117,0.35);
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-bottom: 1.5rem;
+    font-size: 13.5px;
+    color: var(--green-light);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .flash-banner.error {
+    background: rgba(224,92,92,0.1);
+    border-color: rgba(224,92,92,0.3);
+    color: #f08080;
+  }
+
+  /* ── Topbar ── */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 2.5rem;
+    padding-bottom: 1.25rem;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .topbar-logo {
+    display: flex; align-items: center; gap: 12px;
+    text-decoration: none;
+  }
+  .topbar-icon {
+    width: 38px; height: 38px; border-radius: 10px;
+    background: linear-gradient(135deg, #185FA5, #378ADD);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .topbar-title {
+    font-family: 'DM Serif Display', Georgia, serif;
+    font-size: 20px; color: var(--text-primary);
+    letter-spacing: -0.01em; line-height: 1.1;
+  }
+  .topbar-title span { color: rgba(180,195,230,0.5); font-size: 13px; font-family: 'DM Sans', sans-serif; font-weight: 300; display: block; }
+
+  .topbar-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+  .badge-role {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(24,95,165,0.15);
+    border: 1px solid rgba(55,138,221,0.3);
+    border-radius: 100px; padding: 5px 14px;
+    font-size: 11px; font-weight: 500; letter-spacing: 0.06em;
+    color: var(--blue-light); text-transform: uppercase;
+  }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 9px 18px; border-radius: 10px;
+    font-size: 13.5px; font-weight: 500;
+    font-family: 'DM Sans', sans-serif;
+    text-decoration: none; border: none; cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
+    letter-spacing: 0.01em;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, #185FA5, #378ADD);
+    color: #fff;
+    box-shadow: 0 3px 14px rgba(24,95,165,0.35);
+  }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 5px 22px rgba(24,95,165,0.5); }
+
+  .btn-ghost {
+    background: rgba(55,138,221,0.08);
+    color: rgba(180,195,230,0.7);
+    border: 1px solid var(--border);
+  }
+  .btn-ghost:hover { background: rgba(55,138,221,0.15); color: var(--text-primary); transform: translateY(-1px); }
+
+  .btn-green {
+    background: rgba(29,158,117,0.12);
+    color: var(--green-light);
+    border: 1px solid rgba(29,158,117,0.3);
+  }
+  .btn-green:hover { background: rgba(29,158,117,0.22); border-color: rgba(29,158,117,0.5); transform: translateY(-1px); }
+
+  .btn-danger {
+    background: rgba(224,92,92,0.1);
+    color: #f08080;
+    border: 1px solid rgba(224,92,92,0.25);
+    padding: 8px 15px; font-size: 13px;
+  }
+  .btn-danger:hover { background: rgba(224,92,92,0.2); }
+
+  .btn-sm { padding: 7px 14px; font-size: 12.5px; }
+
+  /* ── Section headers ── */
+  .section-header {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 1.5rem;
+  }
+  .section-label {
+    font-family: 'DM Serif Display', Georgia, serif;
+    font-size: 22px; color: var(--text-primary);
+  }
+  .section-count {
+    background: rgba(55,138,221,0.12);
+    border: 1px solid rgba(55,138,221,0.22);
+    border-radius: 100px; padding: 2px 10px;
+    font-size: 11px; color: var(--blue-light);
+    letter-spacing: 0.05em; font-weight: 500;
+  }
+
+  /* ── Add Job Panel ── */
+  .panel {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 2rem;
+    margin-bottom: 2.5rem;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 0 50px rgba(24,95,165,0.08), inset 0 1px 0 rgba(255,255,255,0.04);
+    animation: fadeUp 0.4s ease both;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .panel-title {
+    font-family: 'DM Serif Display', Georgia, serif;
+    font-size: 18px; color: var(--text-primary);
+    margin-bottom: 1.25rem;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .panel-title svg { opacity: 0.7; }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+  @media (max-width: 580px) { .form-grid { grid-template-columns: 1fr; } }
+
+  .form-field { display: flex; flex-direction: column; gap: 6px; }
+  .form-field.span2 { grid-column: 1 / -1; }
+
+  label {
+    font-size: 11px; font-weight: 500; letter-spacing: 0.07em;
+    text-transform: uppercase; color: rgba(150,170,220,0.6);
+  }
+
+  input[type="text"], input[type="file"], textarea {
+    background: rgba(4,16,42,0.6);
+    border: 1px solid rgba(55,138,221,0.2);
+    border-radius: 10px;
+    padding: 11px 14px;
+    font-size: 14px; font-family: 'DM Sans', sans-serif;
+    color: var(--text-primary);
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    width: 100%;
+  }
+  input[type="text"]::placeholder, textarea::placeholder { color: rgba(150,170,220,0.35); }
+  input[type="text"]:focus, textarea:focus {
+    border-color: rgba(55,138,221,0.5);
+    box-shadow: 0 0 0 3px rgba(55,138,221,0.1);
+  }
+  textarea { resize: vertical; min-height: 90px; }
+
+  input[type="file"] {
+    padding: 9px 14px;
+    cursor: pointer;
+    color: rgba(180,195,230,0.7);
+  }
+  input[type="file"]::-webkit-file-upload-button {
+    background: rgba(55,138,221,0.15);
+    border: 1px solid rgba(55,138,221,0.3);
+    border-radius: 7px; padding: 5px 12px;
+    color: var(--blue-light); font-size: 12px;
+    font-family: 'DM Sans', sans-serif; cursor: pointer;
+    margin-right: 10px; transition: background 0.2s;
+  }
+  input[type="file"]::-webkit-file-upload-button:hover {
+    background: rgba(55,138,221,0.25);
+  }
+
+  .form-actions { display: flex; justify-content: flex-end; margin-top: 4px; }
+
+  /* ── Job cards ── */
+  .jobs-grid {
+    display: flex; flex-direction: column; gap: 16px;
+  }
+
+  .job-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.75rem;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 0 40px rgba(24,95,165,0.06), inset 0 1px 0 rgba(255,255,255,0.03);
+    transition: border-color 0.25s, box-shadow 0.25s, transform 0.25s;
+    animation: fadeUp 0.4s ease both;
+    position: relative;
+    overflow: hidden;
+  }
+  .job-card::before {
+    content: '';
+    position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+    background: linear-gradient(180deg, #185FA5, #378ADD);
+    border-radius: 16px 0 0 16px;
+    opacity: 0; transition: opacity 0.25s;
+  }
+  .job-card:hover {
+    border-color: rgba(55,138,221,0.38);
+    box-shadow: 0 0 60px rgba(24,95,165,0.14), inset 0 1px 0 rgba(255,255,255,0.05);
+    transform: translateY(-2px);
+  }
+  .job-card:hover::before { opacity: 1; }
+
+  .job-card:nth-child(1) { animation-delay: 0.05s; }
+  .job-card:nth-child(2) { animation-delay: 0.1s; }
+  .job-card:nth-child(3) { animation-delay: 0.15s; }
+  .job-card:nth-child(4) { animation-delay: 0.2s; }
+  .job-card:nth-child(5) { animation-delay: 0.25s; }
+
+  .job-header {
+    display: flex; align-items: flex-start;
+    justify-content: space-between; gap: 1rem;
+    margin-bottom: 0.75rem; flex-wrap: wrap;
+  }
+
+  .job-title {
+    font-family: 'DM Serif Display', Georgia, serif;
+    font-size: 19px; color: var(--text-primary);
+    line-height: 1.2;
+  }
+
+  .job-salary {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: rgba(29,158,117,0.1);
+    border: 1px solid rgba(29,158,117,0.28);
+    border-radius: 100px; padding: 4px 12px;
+    font-size: 12px; font-weight: 500;
+    color: var(--green-light); white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .job-meta {
+    display: flex; align-items: center; gap: 14px;
+    margin-bottom: 1rem; flex-wrap: wrap;
+  }
+  .job-meta-item {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 12.5px; color: var(--text-muted); font-weight: 300;
+  }
+  .job-meta-item svg { opacity: 0.6; flex-shrink: 0; }
+
+  .job-desc {
+    font-size: 13.5px; color: rgba(180,195,230,0.55);
+    line-height: 1.65; font-weight: 300;
+    margin-bottom: 1.25rem;
+    padding-bottom: 1.25rem;
+    border-bottom: 1px solid rgba(55,138,221,0.1);
+  }
+
+  .job-footer {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 12px;
+  }
+
+  .apply-form {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  }
+  .apply-form input[type="file"] {
+    background: rgba(4,16,42,0.5);
+    border-color: rgba(55,138,221,0.18);
+    padding: 7px 12px; font-size: 12.5px;
+    border-radius: 9px; width: auto;
+  }
+
+  /* ── Empty state ── */
+  .empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--text-muted);
+  }
+  .empty-state svg { opacity: 0.25; margin-bottom: 1rem; }
+  .empty-state p { font-size: 14px; font-weight: 300; }
+
+  /* ── CSRF hidden input ── */
+  input[type="hidden"] { display: none; }
+</style>
+</head>
+<body>
+
+  <div class="bg-grid"></div>
+  <div class="bg-glow1"></div>
+  <div class="bg-glow2"></div>
+
+  <div class="page-wrap">
+
+    <!-- Flash messages -->
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        {% for msg in messages %}
+          <div class="flash-banner {% if 'rejected' in msg.lower() or 'error' in msg.lower() or 'blocked' in msg.lower() or 'invalid' in msg.lower() %}error{% endif %}">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+              {% if 'rejected' in msg.lower() or 'error' in msg.lower() or 'blocked' in msg.lower() %}
+                <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/>
+                <path d="M12 8v4M12 16h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              {% else %}
+                <path d="M9 12l2 2 4-4M12 3l7 3v5c0 4.5-3 8.5-7 10C8 19.5 5 15.5 5 11V6l7-3z" stroke="currentColor" stroke-width="2"/>
+              {% endif %}
+            </svg>
+            {{ msg }}
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <!-- Topbar -->
+    <div class="topbar">
+      <a href="/dashboard" class="topbar-logo">
+        <div class="topbar-icon">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.35C16.5 22.15 20 17.25 20 12V6L12 2z"
+                  fill="rgba(255,255,255,0.15)" stroke="white" stroke-width="1.5" stroke-linejoin="round"/>
+            <path d="M9 12l2 2 4-4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="topbar-title">
+          Recruitment Portal
+          <span>Job Listings</span>
+        </div>
+      </a>
+      <div class="topbar-actions">
+        <span class="badge-role">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="2"/>
+            <path d="M5 20c0-3.31 3.13-6 7-6s7 2.69 7 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          {{ role }}
+        </span>
+        <a href="/dashboard" class="btn btn-ghost btn-sm">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+            <path d="M3 12l9-9 9 9M5 10v9a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Dashboard
+        </a>
+        <a href="/logout" class="btn btn-ghost btn-sm">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+            <path d="M17 16l4-4-4-4M21 12H9M13 5H5a1 1 0 00-1 1v12a1 1 0 001 1h8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Logout
+        </a>
+      </div>
+    </div>
+
+    <!-- Add Job Panel (admin / employer only) -->
+    {% if role == "admin" or role == "employer" %}
+    <div class="panel">
+      <div class="panel-title">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+          <rect x="3" y="7" width="18" height="14" rx="2" stroke="currentColor" stroke-width="1.6"/>
+          <path d="M8 7V5a4 4 0 018 0v2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+          <path d="M12 12v4M10 14h4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+        </svg>
+        Post a New Job
+      </div>
+
+      <form method="POST" action="/add_job">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="form-grid">
+          <div class="form-field">
+            <label for="job-title">Job Title</label>
+            <input type="text" id="job-title" name="title" placeholder="e.g. Senior Backend Engineer" required maxlength="200">
+          </div>
+          <div class="form-field">
+            <label for="job-company">Company</label>
+            <input type="text" id="job-company" name="company" placeholder="e.g. Acme Corp" required maxlength="200">
+          </div>
+          <div class="form-field">
+            <label for="job-salary">Salary</label>
+            <input type="text" id="job-salary" name="salary" placeholder="e.g. ₹12–18 LPA" maxlength="50">
+          </div>
+          <div class="form-field span2">
+            <label for="job-desc">Description</label>
+            <textarea id="job-desc" name="description" placeholder="Describe the role, responsibilities, and requirements…" maxlength="2000"></textarea>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+              <path d="M12 5v14M5 12h14" stroke="white" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            Post Job
+          </button>
+        </div>
+      </form>
+    </div>
+    {% endif %}
+
+    <!-- All Jobs -->
+    <div class="section-header">
+      <span class="section-label">Open Positions</span>
+      <span class="section-count">{{ jobs | length }} listed</span>
+    </div>
+
+    {% if jobs %}
+    <div class="jobs-grid">
+      {% for job in jobs %}
+      <div class="job-card">
+        <div class="job-header">
+          <h2 class="job-title">{{ job.title }}</h2>
+          {% if job.salary %}
+          <span class="job-salary">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/>
+              <path d="M9 10h6M9 14h6M12 7v10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+            {{ job.salary }}
+          </span>
+          {% endif %}
+        </div>
+
+        <div class="job-meta">
+          <span class="job-meta-item">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+              <path d="M3 21V7a2 2 0 012-2h14a2 2 0 012 2v14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+              <path d="M9 21v-6h6v6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            {{ job.company }}
+          </span>
+        </div>
+
+        {% if job.description %}
+        <p class="job-desc">{{ job.description }}</p>
+        {% else %}
+        <p class="job-desc" style="font-style:italic; opacity:0.4;">No description provided.</p>
+        <div style="margin-bottom: 1.25rem; padding-bottom: 1.25rem; border-bottom: 1px solid rgba(55,138,221,0.1);"></div>
+        {% endif %}
+
+        <div class="job-footer">
+          {% if role == "candidate" %}
+          <form class="apply-form" action="/apply/{{ job._id }}" method="POST" enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="file" name="resume" accept=".pdf,.doc,.docx" required>
+            <button type="submit" class="btn btn-green btn-sm">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+                <path d="M14 2v6h6M12 11v6M9 14l3-3 3 3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              Apply with Resume
+            </button>
+          </form>
+          {% elif role == "admin" or role == "employer" %}
+          <span class="job-meta-item" style="font-size: 11.5px; opacity: 0.45; font-style: italic;">You posted this listing.</span>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    {% else %}
+    <div class="empty-state">
+      <svg width="52" height="52" viewBox="0 0 24 24" fill="none">
+        <rect x="3" y="7" width="18" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M8 7V5a4 4 0 018 0v2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <path d="M9 13h6M9 16h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <p>No job listings yet.{% if role == "admin" or role == "employer" %} Post one above to get started.{% endif %}</p>
+    </div>
+    {% endif %}
+
+  </div>
+
+</body>
+</html>

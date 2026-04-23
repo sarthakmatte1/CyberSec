@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — Recruitment Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js" nonce="{{ g.csp_nonce }}"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #04102a;
+    --surface:   rgba(10,24,54,0.85);
+    --border:    rgba(55,138,221,0.15);
+    --border-hi: rgba(55,138,221,0.3);
+    --text:      #e8f0fe;
+    --muted:     rgba(150,175,220,0.45);
+    --blue:      #378ADD;
+    --green:     #5DCAA5;
+    --amber:     #FAC775;
+    --red:       #F09595;
+    --purple:    #AFA9EC;
+  }
+
+  body {
+    min-height: 100vh;
+    background: var(--bg);
+    font-family: 'DM Sans', sans-serif;
+    color: var(--text);
+  }
+
+  /* ── Background decorations ── */
+  .rp-grid {
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(55,138,221,0.055) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(55,138,221,0.055) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none; z-index: 0;
+  }
+  .rp-glow  { position:fixed; width:600px; height:600px; border-radius:50%; background:radial-gradient(circle,rgba(24,95,165,0.18) 0%,transparent 70%); top:-150px; right:-150px; pointer-events:none; z-index:0; }
+  .rp-glow2 { position:fixed; width:450px; height:450px; border-radius:50%; background:radial-gradient(circle,rgba(15,110,86,0.13) 0%,transparent 70%); bottom:-100px; left:-100px; pointer-events:none; z-index:0; }
+
+  /* ── Navbar ── */
+  .navbar {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(4,14,38,0.95);
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(16px);
+    padding: 0 2rem;
+    height: 64px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .navbar-brand { display:flex; align-items:center; gap:10px; }
+  .navbar-icon {
+    width:34px; height:34px; border-radius:9px;
+    background: linear-gradient(135deg,#185FA5,#378ADD);
+    display:flex; align-items:center; justify-content:center;
+    flex-shrink: 0;
+  }
+  .navbar-title { font-family:'DM Serif Display',Georgia,serif; font-size:18px; color:var(--text); letter-spacing:-0.01em; }
+  .navbar-right { display:flex; align-items:center; gap:12px; }
+  .navbar-badge {
+    display:flex; align-items:center; gap:6px;
+    background:rgba(83,74,183,0.15); border:1px solid rgba(127,119,221,0.3);
+    border-radius:100px; padding:5px 12px;
+    font-size:11px; font-weight:500; letter-spacing:0.06em;
+    color:var(--purple); text-transform:uppercase;
+  }
+  .pulse-dot { width:6px; height:6px; border-radius:50%; background:var(--purple); animation:rp-pulse 2s ease-in-out infinite; }
+  @keyframes rp-pulse { 0%,100%{opacity:1;transform:scale(1);} 50%{opacity:0.4;transform:scale(0.7);} }
+
+  /* ── Tab nav ── */
+  .tab-nav {
+    position: sticky; top: 64px; z-index: 90;
+    background: rgba(4,14,38,0.92);
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(12px);
+    padding: 0 2rem;
+    display: flex; gap: 0; overflow-x: auto;
+  }
+  .tab-btn {
+    display: flex; align-items: center; gap: 7px;
+    padding: 0 20px; height: 48px;
+    font-size: 13px; font-weight: 500;
+    color: var(--muted);
+    border: none; background: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer; white-space: nowrap;
+    transition: color 0.18s, border-color 0.18s;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .tab-btn:hover { color: rgba(200,220,250,0.75); }
+  .tab-btn.active { color: var(--blue); border-bottom-color: var(--blue); }
+  .tab-count {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 20px; height: 20px; padding: 0 5px;
+    border-radius: 100px; background: rgba(55,138,221,0.15);
+    font-size: 11px; font-weight: 600; color: var(--blue);
+  }
+
+  /* ── Page ── */
+  .page { position:relative; z-index:1; padding:2rem; max-width:1400px; margin:0 auto; }
+
+  /* ── Tab sections ── */
+  .tab-section { display:none; }
+  .tab-section.active { display:block; }
+
+  /* ── Section label ── */
+  .section-label {
+    font-size:11px; font-weight:500; letter-spacing:0.08em;
+    text-transform:uppercase; color:rgba(150,175,220,0.35);
+    margin-bottom:0.75rem; margin-top:0.25rem;
+  }
+
+  /* ── Stat cards ── */
+  .stat-grid {
+    display:grid;
+    grid-template-columns:repeat(6,1fr);
+    gap:12px; margin-bottom:1.5rem;
+  }
+  .stat-card {
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:14px; padding:1.1rem 1.25rem;
+    backdrop-filter:blur(8px);
+  }
+  .stat-card-label { font-size:11px; font-weight:500; letter-spacing:0.05em; text-transform:uppercase; color:var(--muted); margin-bottom:8px; }
+  .stat-card-value { font-family:'DM Serif Display',Georgia,serif; font-size:30px; color:var(--text); line-height:1; }
+  .stat-card.danger  { border-color:rgba(226,75,74,0.25); } .stat-card.danger  .stat-card-value { color:var(--red); }
+  .stat-card.warning { border-color:rgba(239,159,39,0.25); } .stat-card.warning .stat-card-value { color:var(--amber); }
+  .stat-card.success { border-color:rgba(29,158,117,0.25); } .stat-card.success .stat-card-value { color:var(--green); }
+  .stat-card.info    { border-color:rgba(55,138,221,0.25); } .stat-card.info    .stat-card-value { color:var(--blue); }
+
+  /* ── Charts ── */
+  .chart-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:1.5rem; }
+  .chart-box {
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:16px; padding:1.5rem; backdrop-filter:blur(8px);
+  }
+  .chart-box h3 { font-size:13px; font-weight:500; letter-spacing:0.05em; text-transform:uppercase; color:var(--muted); margin-bottom:1.25rem; }
+  .chart-box canvas { max-height:260px; }
+
+  /* ── Panel ── */
+  .panel {
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:16px; padding:1.5rem; backdrop-filter:blur(8px); margin-bottom:1.25rem;
+  }
+  .panel-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:1.25rem; }
+  .panel-header h3 { font-size:13px; font-weight:500; letter-spacing:0.05em; text-transform:uppercase; color:var(--muted); margin:0; }
+
+  /* ── Form inside panel ── */
+  .form-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:12px; margin-bottom:1rem; }
+  .form-field { display:flex; flex-direction:column; gap:6px; }
+  .form-field label { font-size:11px; font-weight:500; letter-spacing:0.05em; text-transform:uppercase; color:var(--muted); }
+  .form-field input, .form-field textarea, .form-field select {
+    background:rgba(4,14,38,0.7); border:1px solid var(--border);
+    border-radius:8px; padding:8px 12px;
+    font-size:13.5px; color:var(--text);
+    font-family:'DM Sans',sans-serif;
+    transition:border-color 0.18s;
+    outline:none;
+  }
+  .form-field input:focus, .form-field textarea:focus, .form-field select:focus { border-color:var(--border-hi); }
+  .form-field textarea { resize:vertical; min-height:80px; }
+  .form-field select option { background:#0a1836; color:var(--text); }
+
+  /* ── Tables ── */
+  .table-wrap { overflow-x:auto; }
+  table { width:100%; border-collapse:collapse; }
+  th { font-size:11px; font-weight:500; letter-spacing:0.07em; text-transform:uppercase; color:rgba(130,160,220,0.5); padding:8px 12px; text-align:left; border-bottom:1px solid rgba(55,138,221,0.12); white-space:nowrap; }
+  td { padding:11px 12px; font-size:13.5px; color:rgba(200,220,250,0.75); border-bottom:1px solid rgba(55,138,221,0.07); }
+  tr:last-child td { border-bottom:none; }
+  tr.warning-row td { background:rgba(239,159,39,0.04); }
+  .empty-row td { text-align:center; color:rgba(150,175,220,0.3); padding:2rem; font-size:13px; }
+
+  /* ── Badges ── */
+  .badge {
+    display:inline-flex; align-items:center; gap:5px;
+    padding:3px 10px; border-radius:100px;
+    font-size:11px; font-weight:500; letter-spacing:0.04em;
+  }
+  .badge-red    { background:rgba(163,45,45,0.15);   border:1px solid rgba(226,75,74,0.3);   color:var(--red); }
+  .badge-green  { background:rgba(15,110,86,0.15);   border:1px solid rgba(29,158,117,0.3);  color:var(--green); }
+  .badge-amber  { background:rgba(186,117,23,0.15);  border:1px solid rgba(239,159,39,0.3);  color:var(--amber); }
+  .badge-blue   { background:rgba(24,95,165,0.15);   border:1px solid rgba(55,138,221,0.3);  color:#85B7EB; }
+  .badge-purple { background:rgba(83,74,183,0.15);   border:1px solid rgba(127,119,221,0.3); color:var(--purple); }
+  .tag-dot { width:5px; height:5px; border-radius:50%; background:currentColor; }
+
+  /* ── Buttons ── */
+  .rp-btn {
+    display:inline-flex; align-items:center; gap:6px;
+    padding:6px 12px; border-radius:8px;
+    font-size:12px; font-weight:500;
+    font-family:'DM Sans',sans-serif;
+    text-decoration:none; border:1px solid transparent;
+    cursor:pointer; transition:all 0.18s; letter-spacing:0.01em;
+    background:none;
+  }
+  .btn-green  { background:rgba(15,110,86,0.12);   color:var(--green);  border-color:rgba(29,158,117,0.3); }
+  .btn-green:hover  { background:rgba(15,110,86,0.22); }
+  .btn-red    { background:rgba(163,45,45,0.12);   color:var(--red);    border-color:rgba(226,75,74,0.3); }
+  .btn-red:hover    { background:rgba(163,45,45,0.22); }
+  .btn-blue   { background:linear-gradient(135deg,#185FA5,#378ADD); color:#fff; box-shadow:0 3px 12px rgba(24,95,165,0.35); }
+  .btn-blue:hover   { box-shadow:0 5px 18px rgba(24,95,165,0.5); transform:translateY(-1px); }
+  .btn-purple { background:rgba(83,74,183,0.12);   color:var(--purple); border-color:rgba(127,119,221,0.3); }
+  .btn-purple:hover { background:rgba(83,74,183,0.22); }
+  .btn-amber  { background:rgba(186,117,23,0.12);  color:var(--amber);  border-color:rgba(239,159,39,0.3); }
+  .btn-amber:hover  { background:rgba(186,117,23,0.22); }
+
+  /* confirm delete */
+  .btn-red-confirm { display:inline-flex; align-items:center; gap:6px; padding:6px 12px; border-radius:8px; font-size:12px; font-weight:500; font-family:'DM Sans',sans-serif; text-decoration:none; cursor:pointer; transition:all 0.18s; background:rgba(163,45,45,0.12); color:var(--red); border:1px solid rgba(226,75,74,0.3); }
+  .btn-red-confirm:hover { background:rgba(163,45,45,0.22); }
+
+  /* ── Flash messages ── */
+  .flash-list { list-style:none; margin-bottom:1.25rem; display:flex; flex-direction:column; gap:8px; }
+  .flash-item {
+    display:flex; align-items:center; gap:10px;
+    padding:10px 16px; border-radius:10px;
+    font-size:13.5px;
+    background:rgba(55,138,221,0.1); border:1px solid rgba(55,138,221,0.25); color:#85B7EB;
+  }
+
+  /* ── Divider ── */
+  .rp-divider { height:1px; background:rgba(55,138,221,0.1); margin:1.25rem 0; }
+
+  /* ── Footer ── */
+  .footer-btns { display:flex; gap:10px; margin-top:1.25rem; padding-top:1.25rem; border-top:1px solid rgba(55,138,221,0.1); }
+
+  /* ── Monospace ── */
+  .mono { font-family:monospace; font-size:13px; }
+
+  /* ── Responsive ── */
+  @media(max-width:1100px) { .stat-grid{grid-template-columns:repeat(3,1fr);} .chart-grid{grid-template-columns:1fr;} }
+  @media(max-width:700px)  { .stat-grid{grid-template-columns:repeat(2,1fr);} .page{padding:1rem;} }
+</style>
+</head>
+<body>
+
+<div class="rp-grid"></div>
+<div class="rp-glow"></div>
+<div class="rp-glow2"></div>
+
+<!-- ══════════════════════════════════════════ NAVBAR -->
+<nav class="navbar">
+  <div class="navbar-brand">
+    <div class="navbar-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+        <path d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.35C16.5 22.15 20 17.25 20 12V6L12 2z"
+              fill="rgba(255,255,255,0.15)" stroke="white" stroke-width="1.5" stroke-linejoin="round"/>
+        <path d="M9 12l2 2 4-4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <span class="navbar-title">Recruitment Portal — Admin</span>
+  </div>
+  <div class="navbar-right">
+    <div class="navbar-badge">
+      <span class="pulse-dot"></span>
+      Admin Panel
+    </div>
+    <a href="/logout" class="rp-btn btn-purple" style="margin:0;">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+        <path d="M16 17l5-5-5-5M21 12H9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+      </svg>
+      Logout
+    </a>
+  </div>
+</nav>
+
+<!-- ══════════════════════════════════════════ TAB NAV -->
+<div class="tab-nav">
+  <button class="tab-btn active" data-tab="overview">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.7"/><rect x="14" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.7"/><rect x="3" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.7"/><rect x="14" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.7"/></svg>
+    Overview
+  </button>
+  <button class="tab-btn" data-tab="users">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.7"/><path d="M4 20c0-4 3.582-7 8-7s8 3 8 7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+    Users
+    <span class="tab-count">{{ total_users }}</span>
+  </button>
+  <button class="tab-btn" data-tab="employers">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><rect x="2" y="7" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2" stroke="currentColor" stroke-width="1.7"/></svg>
+    Employers
+    <span class="tab-count">{{ total_employers }}</span>
+  </button>
+  <button class="tab-btn" data-tab="jobs">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" stroke="currentColor" stroke-width="1.7"/><rect x="9" y="3" width="6" height="4" rx="1" stroke="currentColor" stroke-width="1.7"/></svg>
+    Jobs
+    <span class="tab-count">{{ jobs|length }}</span>
+  </button>
+  <button class="tab-btn" data-tab="applications">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="currentColor" stroke-width="1.7"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+    Applications
+    <span class="tab-count">{{ total_apps }}</span>
+  </button>
+  <button class="tab-btn" data-tab="security">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.35C16.5 22.15 20 17.25 20 12V6L12 2z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
+    Security
+  </button>
+  <button class="tab-btn" data-tab="logs">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h16M4 18h10" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+    Audit Logs
+  </button>
+</div>
+
+<!-- ══════════════════════════════════════════ PAGE -->
+<div class="page">
+
+  <!-- Flash messages -->
+  {% with messages = get_flashed_messages() %}
+  {% if messages %}
+  <ul class="flash-list">
+    {% for msg in messages %}
+    <li class="flash-item">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.8"/><path d="M12 8v4M12 16h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      {{ msg }}
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+  {% endwith %}
+
+  <!-- ════════════════════════════ TAB: OVERVIEW -->
+  <div id="tab-overview" class="tab-section active">
+
+    <div class="section-label">System Overview</div>
+    <div class="stat-grid">
+      <div class="stat-card info">
+        <div class="stat-card-label">Total Users</div>
+        <div class="stat-card-value">{{ total_users }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-label">Employers</div>
+        <div class="stat-card-value">{{ total_employers }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-label">Candidates</div>
+        <div class="stat-card-value">{{ total_candidates }}</div>
+      </div>
+      <div class="stat-card danger">
+        <div class="stat-card-label">Failed Logins</div>
+        <div class="stat-card-value">{{ failed_logins }}</div>
+      </div>
+      <div class="stat-card warning">
+        <div class="stat-card-label">OTP Failures</div>
+        <div class="stat-card-value">{{ otp_failures }}</div>
+      </div>
+      <div class="stat-card danger">
+        <div class="stat-card-label">Locked Accounts</div>
+        <div class="stat-card-value">{{ locked_accounts }}</div>
+      </div>
+      <div class="stat-card success">
+        <div class="stat-card-label">Total Applications</div>
+        <div class="stat-card-value">{{ total_apps }}</div>
+      </div>
+      <div class="stat-card warning">
+        <div class="stat-card-label">Blocked Files</div>
+        <div class="stat-card-value">{{ blocked_files }}</div>
+      </div>
+      <div class="stat-card success">
+        <div class="stat-card-label">Shortlisted</div>
+        <div class="stat-card-value">{{ shortlisted }}</div>
+      </div>
+      <div class="stat-card danger">
+        <div class="stat-card-label">Rejected</div>
+        <div class="stat-card-value">{{ rejected }}</div>
+      </div>
+      <div class="stat-card amber" style="border-color:rgba(239,159,39,0.25);">
+        <div class="stat-card-label">Pending</div>
+        <div class="stat-card-value" style="color:var(--amber);">{{ applied }}</div>
+      </div>
+      <div class="stat-card info">
+        <div class="stat-card-label">Jobs Posted</div>
+        <div class="stat-card-value">{{ jobs|length }}</div>
+      </div>
+    </div>
+
+    <div class="section-label">Analytics</div>
+    <div class="chart-grid">
+      <div class="chart-box">
+        <h3>Application Status</h3>
+        <canvas id="appChart"></canvas>
+      </div>
+      <div class="chart-box">
+        <h3>Threat Distribution</h3>
+        <canvas id="threatChart"></canvas>
+      </div>
+    </div>
+
+  </div><!-- /overview -->
+
+  <!-- ════════════════════════════ TAB: USERS -->
+  <div id="tab-users" class="tab-section">
+
+    <div class="section-label">All Users</div>
+    <div class="panel">
+      <div class="panel-header">
+        <h3>User Accounts</h3>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Company</th>
+              <th>Created By</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for u in users %}
+            <tr>
+              <td>{{ u.name }}</td>
+              <td class="mono" style="color:rgba(150,175,220,0.7);">{{ u.email }}</td>
+              <td>
+                {% if u.role == "admin" %}
+                  <span class="badge badge-purple"><span class="tag-dot"></span>Admin</span>
+                {% elif u.role == "employer" %}
+                  <span class="badge badge-blue"><span class="tag-dot"></span>Employer</span>
+                {% else %}
+                  <span class="badge badge-green"><span class="tag-dot"></span>Candidate</span>
+                {% endif %}
+              </td>
+              <td style="color:rgba(150,175,220,0.55);">{{ u.company or "—" }}</td>
+              <td style="color:rgba(150,175,220,0.45); font-size:12px;">{{ u.created_by or "—" }}</td>
+              <td>
+                {% if u.role != "admin" %}
+                <a href="/admin/delete_user/{{ u._id }}"
+                   class="rp-btn btn-red"
+                   onclick="return confirm('Delete {{ u.email }}? This cannot be undone.')">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                    <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  Delete
+                </a>
+                {% else %}
+                <span style="color:rgba(150,175,220,0.3); font-size:12px;">Protected</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% else %}
+            <tr class="empty-row"><td colspan="6">No users found</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /users -->
+
+  <!-- ════════════════════════════ TAB: EMPLOYERS (Create) -->
+  <div id="tab-employers" class="tab-section">
+
+    <div class="section-label">Create Employer Account</div>
+    <div class="panel">
+      <div class="panel-header">
+        <h3>New Employer</h3>
+      </div>
+      <!-- BUG FIX: route is /admin/create_employer -->
+      <form method="POST" action="/admin/create_employer">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="form-grid">
+          <div class="form-field">
+            <label>Full Name</label>
+            <input type="text" name="name" placeholder="Jane Smith" required maxlength="100">
+          </div>
+          <div class="form-field">
+            <label>Email Address</label>
+            <input type="email" name="email" placeholder="jane@acme.com" required maxlength="254">
+          </div>
+          <div class="form-field">
+            <label>Company Name</label>
+            <input type="text" name="company" placeholder="Acme Corp" required maxlength="200">
+          </div>
+        </div>
+        <button type="submit" class="rp-btn btn-blue">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" stroke="white" stroke-width="1.8"/>
+            <path d="M12 8v8M8 12h8" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+          Create Employer & Send Credentials
+        </button>
+      </form>
+
+      <div class="rp-divider"></div>
+
+      <!-- Employer list -->
+      <div class="panel-header" style="margin-bottom:1rem;">
+        <h3>Existing Employers ({{ total_employers }})</h3>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Company</th>
+              <th>Created By</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for u in users if u.role == "employer" %}
+            <tr>
+              <td>{{ u.name }}</td>
+              <td class="mono" style="color:rgba(150,175,220,0.7);">{{ u.email }}</td>
+              <td>{{ u.company or "—" }}</td>
+              <td style="color:rgba(150,175,220,0.45); font-size:12px;">{{ u.created_by or "—" }}</td>
+              <td>
+                <a href="/admin/delete_user/{{ u._id }}"
+                   class="rp-btn btn-red"
+                   onclick="return confirm('Delete employer {{ u.email }}? This cannot be undone.')">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                    <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  Delete
+                </a>
+              </td>
+            </tr>
+            {% else %}
+            <tr class="empty-row"><td colspan="5">No employers yet</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /employers -->
+
+  <!-- ════════════════════════════ TAB: JOBS -->
+  <div id="tab-jobs" class="tab-section">
+
+    <div class="section-label">Post a New Job</div>
+    <div class="panel">
+      <div class="panel-header">
+        <h3>Add Job Listing</h3>
+      </div>
+      <!-- BUG FIX: admin can post jobs — route /add_job with company from form -->
+      <form method="POST" action="/add_job">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="form-grid">
+          <div class="form-field">
+            <label>Job Title</label>
+            <input type="text" name="title" placeholder="Software Engineer" required maxlength="200">
+          </div>
+          <div class="form-field">
+            <label>Company</label>
+            <input type="text" name="company" placeholder="Acme Corp" maxlength="200">
+          </div>
+          <div class="form-field">
+            <label>Salary</label>
+            <input type="text" name="salary" placeholder="₹8–12 LPA" maxlength="50">
+          </div>
+          <div class="form-field" style="grid-column:1/-1;">
+            <label>Description</label>
+            <textarea name="description" placeholder="Job description..." maxlength="2000"></textarea>
+          </div>
+        </div>
+        <button type="submit" class="rp-btn btn-blue">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" stroke="white" stroke-width="1.8"/>
+            <path d="M12 8v8M8 12h8" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+          Post Job
+        </button>
+      </form>
+
+      <div class="rp-divider"></div>
+
+      <div class="panel-header" style="margin-bottom:1rem;">
+        <h3>All Job Listings ({{ jobs|length }})</h3>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th>Company</th>
+              <th>Salary</th>
+              <th>Posted By</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for job in jobs %}
+            <tr>
+              <td style="font-weight:500; color:var(--text);">{{ job.title }}</td>
+              <td>{{ job.company }}</td>
+              <td style="color:var(--green);">{{ job.salary or "—" }}</td>
+              <td class="mono" style="font-size:12px; color:rgba(150,175,220,0.55);">{{ job.employer_email }}</td>
+              <td style="max-width:280px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:rgba(150,175,220,0.5); font-size:12.5px;" title="{{ job.description }}">{{ job.description or "—" }}</td>
+            </tr>
+            {% else %}
+            <tr class="empty-row"><td colspan="5">No jobs posted yet</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /jobs -->
+
+  <!-- ════════════════════════════ TAB: APPLICATIONS -->
+  <div id="tab-applications" class="tab-section">
+
+    <div class="section-label">Candidate Applications</div>
+    <div class="panel">
+      <div class="panel-header">
+        <h3>All Applications ({{ total_apps }})</h3>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Candidate</th>
+              <th>Job</th>
+              <th>Company</th>
+              <th>Resume</th>
+              <th>Status</th>
+              <!-- BUG FIX: Admin shortlist/reject routes added to app.py;
+                   removed broken /shortlist and /reject links that pointed to
+                   employer-only routes. Admin views status read-only. -->
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for app in applications %}
+            <tr>
+              <td>
+                <div style="font-weight:500; color:var(--text);">{{ app.user_name }}</div>
+                <div class="mono" style="font-size:12px; color:rgba(150,175,220,0.5);">{{ app.user_email }}</div>
+              </td>
+              <td style="color:rgba(200,220,250,0.8);">{{ app.job_title or app.job_id }}</td>
+              <td style="color:rgba(150,175,220,0.6);">{{ app.company or "—" }}</td>
+              <td style="color:rgba(150,175,220,0.5); font-size:12.5px;">{{ app.resume }}</td>
+              <td>
+                {# BUG FIX: app.py stores "Shortlisted"/"Rejected"/"Applied" (Title case) #}
+                {% if app.status == "Shortlisted" %}
+                  <span class="badge badge-green"><span class="tag-dot"></span>Shortlisted</span>
+                {% elif app.status == "Rejected" %}
+                  <span class="badge badge-red"><span class="tag-dot"></span>Rejected</span>
+                {% else %}
+                  <span class="badge badge-amber"><span class="tag-dot"></span>{{ app.status }}</span>
+                {% endif %}
+              </td>
+              <td>
+                {# BUG FIX: Admin uses /admin/shortlist and /admin/reject (new routes needed in app.py — see note) #}
+                <a href="/admin/shortlist/{{ app._id }}" class="rp-btn btn-green">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                    <path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  Shortlist
+                </a>
+                <a href="/admin/reject/{{ app._id }}" class="rp-btn btn-red">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                    <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  </svg>
+                  Reject
+                </a>
+              </td>
+            </tr>
+            {% else %}
+            <tr class="empty-row"><td colspan="6">No applications yet</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /applications -->
+
+  <!-- ════════════════════════════ TAB: SECURITY -->
+  <div id="tab-security" class="tab-section">
+
+    <div class="section-label">Threat Intelligence</div>
+    <div class="panel">
+      <div class="panel-header">
+        <h3>Suspicious IP Alerts</h3>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>IP Address</th>
+              <th>Failed Attempts</th>
+              <th>Risk Level</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for ip in suspicious_ips %}
+            <tr class="warning-row">
+              <td class="mono" style="color:var(--amber);">{{ ip._id }}</td>
+              <td>{{ ip.count }}</td>
+              <td><span class="badge badge-red"><span class="tag-dot"></span>HIGH</span></td>
+              <td><span class="badge badge-amber">Possible Brute Force</span></td>
+            </tr>
+            {% else %}
+            <tr class="empty-row"><td colspan="4">No suspicious IP activity found</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <h3>Blocked IP Addresses</h3>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>IP Address</th>
+              <th>Blocked Until</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for ip in blocked_ips %}
+            <tr>
+              <td class="mono" style="color:var(--red);">{{ ip.ip }}</td>
+              {# BUG FIX: convert Unix timestamp to human-readable using Jinja filter #}
+              <td style="color:rgba(180,195,230,0.6);">
+                {{ ip.until | int | timestamp_to_str if ip.until else "—" }}
+              </td>
+              <td>
+                <a href="/unblock_ip/{{ ip._id }}" class="rp-btn btn-green">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                    <path d="M8 11V7a4 4 0 018 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                    <rect x="3" y="11" width="18" height="11" rx="2" stroke="currentColor" stroke-width="1.8"/>
+                  </svg>
+                  Unblock
+                </a>
+              </td>
+            </tr>
+            {% else %}
+            <tr class="empty-row"><td colspan="3">No blocked IPs</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /security -->
+
+  <!-- ════════════════════════════ TAB: AUDIT LOGS -->
+  <div id="tab-logs" class="tab-section">
+
+    <div class="section-label">Audit Trail</div>
+    <div class="panel">
+      <div class="panel-header">
+        <h3>Recent Security Logs (last 50)</h3>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Email</th>
+              <th>Action</th>
+              <th>IP Address</th>
+              <th>Time</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for log in logs %}
+            <tr>
+              <td class="mono" style="font-size:13px; color:rgba(150,175,220,0.7);">{{ log.email }}</td>
+              <td>
+                {% if "FAIL" in log.action or "BLOCK" in log.action or "LOCK" in log.action %}
+                  <span class="badge badge-red">{{ log.action }}</span>
+                {% elif "SUCCESS" in log.action or "REGISTER" in log.action %}
+                  <span class="badge badge-green">{{ log.action }}</span>
+                {% elif "OTP" in log.action %}
+                  <span class="badge badge-amber">{{ log.action }}</span>
+                {% else %}
+                  <span class="badge badge-blue">{{ log.action }}</span>
+                {% endif %}
+              </td>
+              <td class="mono" style="font-size:13px; color:rgba(150,175,220,0.6);">{{ log.ip }}</td>
+              <td style="color:rgba(150,175,220,0.45); font-size:12.5px;">{{ log.time }}</td>
+            </tr>
+            {% else %}
+            <tr class="empty-row"><td colspan="4">No logs found</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /logs -->
+
+</div><!-- /page -->
+
+<!-- ══════════════════════════════════════════ SCRIPTS -->
+<script nonce="{{ g.csp_nonce }}">
+/* ── Tab switching — runs after DOM is ready ── */
+document.addEventListener('DOMContentLoaded', function () {
+
+  function switchTab(name) {
+    document.querySelectorAll('.tab-section').forEach(function(s) {
+      s.classList.remove('active');
+    });
+    document.querySelectorAll('.tab-btn').forEach(function(b) {
+      b.classList.remove('active');
+    });
+    var section = document.getElementById('tab-' + name);
+    var btn = document.querySelector('.tab-btn[data-tab="' + name + '"]');
+    if (section) section.classList.add('active');
+    if (btn) btn.classList.add('active');
+  }
+
+  /* Attach click listeners to every tab button */
+  document.querySelectorAll('.tab-btn[data-tab]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      switchTab(btn.getAttribute('data-tab'));
+    });
+  });
+
+  /* Auto-open tab from URL hash, e.g. /admin#jobs */
+  var hash = location.hash.replace('#', '');
+  if (hash && document.getElementById('tab-' + hash)) {
+    switchTab(hash);
+  }
+});
+
+/* ── Chart.js defaults ── */
+Chart.defaults.color = 'rgba(150,175,220,0.55)';
+Chart.defaults.borderColor = 'rgba(55,138,221,0.1)';
+Chart.defaults.font.family = "'DM Sans', sans-serif";
+Chart.defaults.font.size = 12;
+
+/* ── Application status bar chart ── */
+new Chart(document.getElementById('appChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Applied', 'Shortlisted', 'Rejected'],
+    datasets: [{
+      label: 'Applications',
+      data: [{{ applied }}, {{ shortlisted }}, {{ rejected }}],
+      backgroundColor: ['rgba(55,138,221,0.25)', 'rgba(29,158,117,0.25)', 'rgba(226,75,74,0.25)'],
+      borderColor:     ['rgba(55,138,221,0.7)',   'rgba(29,158,117,0.7)',  'rgba(226,75,74,0.7)'],
+      borderWidth: 1, borderRadius: 6,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { color: 'rgba(55,138,221,0.07)' } },
+      y: { grid: { color: 'rgba(55,138,221,0.07)' }, beginAtZero: true }
+    }
+  }
+});
+
+/* ── Threat doughnut chart ── */
+new Chart(document.getElementById('threatChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Failed Logins', 'OTP Failures', 'Blocked Files', 'Locked Accounts'],
+    datasets: [{
+      data: [{{ failed_logins }}, {{ otp_failures }}, {{ blocked_files }}, {{ locked_accounts }}],
+      backgroundColor: [
+        'rgba(226,75,74,0.7)', 'rgba(239,159,39,0.7)',
+        'rgba(127,119,221,0.7)', 'rgba(55,138,221,0.7)'
+      ],
+      borderColor: '#04102a', borderWidth: 3, hoverOffset: 6
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { position:'bottom', labels:{ padding:18, usePointStyle:true, pointStyleWidth:8 } }
+    },
+    cutout: '62%'
+  }
+});
+</script>
+</body>
+</html>

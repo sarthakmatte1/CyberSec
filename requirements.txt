@@ -1,0 +1,10 @@
+flask
+pymongo
+python-dotenv
+flask-bcrypt
+flask-jwt-extended
+werkzeug
+pyotp
+qrcode
+flask-mail
+flask-limiter
