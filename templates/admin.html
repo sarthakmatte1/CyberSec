@@ -4,824 +4,1547 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Admin — Recruitment Portal</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Instrument+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js" nonce="{{ g.csp_nonce }}"></script>
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  :root {
-    --bg:        #04102a;
-    --surface:   rgba(10,24,54,0.85);
-    --border:    rgba(55,138,221,0.15);
-    --border-hi: rgba(55,138,221,0.3);
-    --text:      #e8f0fe;
-    --muted:     rgba(150,175,220,0.45);
-    --blue:      #378ADD;
-    --green:     #5DCAA5;
-    --amber:     #FAC775;
-    --red:       #F09595;
-    --purple:    #AFA9EC;
-  }
+:root {
+  --bg:         #F5F3EE;
+  --surface:    #FFFFFF;
+  --surface2:   #FAFAF8;
+  --border:     #E2DDD5;
+  --border-hi:  #C8C0B4;
+  --text:       #1A1714;
+  --text-2:     #4A4540;
+  --text-3:     #857D75;
+  --text-4:     #B0A89E;
+  --blue:       #2563A8;
+  --blue-bg:    #EEF4FB;
+  --blue-bd:    #C0D5EE;
+  --green:      #1D7A56;
+  --green-bg:   #EDF7F2;
+  --green-bd:   #A8D9C3;
+  --amber:      #A05C1A;
+  --amber-bg:   #FEF6EC;
+  --amber-bd:   #F0C990;
+  --red:        #B83232;
+  --red-bg:     #FDF0F0;
+  --red-bd:     #EDB8B8;
+  --purple:     #5B3FA6;
+  --purple-bg:  #F2EFFE;
+  --purple-bd:  #C9BAF0;
+  --radius:     10px;
+  --shadow-sm:  0 1px 3px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow:     0 2px 8px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.05);
+  --shadow-lg:  0 8px 24px rgba(0,0,0,0.10), 0 2px 6px rgba(0,0,0,0.06);
+}
 
-  body {
-    min-height: 100vh;
-    background: var(--bg);
-    font-family: 'DM Sans', sans-serif;
-    color: var(--text);
-  }
+body {
+  min-height: 100vh;
+  background: var(--bg);
+  font-family: 'Instrument Sans', sans-serif;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.5;
+}
 
-  /* ── Background decorations ── */
-  .rp-grid {
-    position: fixed; inset: 0;
-    background-image:
-      linear-gradient(rgba(55,138,221,0.055) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(55,138,221,0.055) 1px, transparent 1px);
-    background-size: 48px 48px;
-    pointer-events: none; z-index: 0;
-  }
-  .rp-glow  { position:fixed; width:600px; height:600px; border-radius:50%; background:radial-gradient(circle,rgba(24,95,165,0.18) 0%,transparent 70%); top:-150px; right:-150px; pointer-events:none; z-index:0; }
-  .rp-glow2 { position:fixed; width:450px; height:450px; border-radius:50%; background:radial-gradient(circle,rgba(15,110,86,0.13) 0%,transparent 70%); bottom:-100px; left:-100px; pointer-events:none; z-index:0; }
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Cpath d='M0 0h60v60H0z' fill='none'/%3E%3Ccircle cx='30' cy='30' r='0.5' fill='%23000' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none; z-index: 0;
+}
 
-  /* ── Navbar ── */
-  .navbar {
-    position: sticky; top: 0; z-index: 100;
-    background: rgba(4,14,38,0.95);
-    border-bottom: 1px solid var(--border);
-    backdrop-filter: blur(16px);
-    padding: 0 2rem;
-    height: 64px;
-    display: flex; align-items: center; justify-content: space-between;
-  }
-  .navbar-brand { display:flex; align-items:center; gap:10px; }
-  .navbar-icon {
-    width:34px; height:34px; border-radius:9px;
-    background: linear-gradient(135deg,#185FA5,#378ADD);
-    display:flex; align-items:center; justify-content:center;
-    flex-shrink: 0;
-  }
-  .navbar-title { font-family:'DM Serif Display',Georgia,serif; font-size:18px; color:var(--text); letter-spacing:-0.01em; }
-  .navbar-right { display:flex; align-items:center; gap:12px; }
-  .navbar-badge {
-    display:flex; align-items:center; gap:6px;
-    background:rgba(83,74,183,0.15); border:1px solid rgba(127,119,221,0.3);
-    border-radius:100px; padding:5px 12px;
-    font-size:11px; font-weight:500; letter-spacing:0.06em;
-    color:var(--purple); text-transform:uppercase;
-  }
-  .pulse-dot { width:6px; height:6px; border-radius:50%; background:var(--purple); animation:rp-pulse 2s ease-in-out infinite; }
-  @keyframes rp-pulse { 0%,100%{opacity:1;transform:scale(1);} 50%{opacity:0.4;transform:scale(0.7);} }
+.shell { display: flex; min-height: 100vh; position: relative; z-index: 1; }
 
-  /* ── Tab nav ── */
-  .tab-nav {
-    position: sticky; top: 64px; z-index: 90;
-    background: rgba(4,14,38,0.92);
-    border-bottom: 1px solid var(--border);
-    backdrop-filter: blur(12px);
-    padding: 0 2rem;
-    display: flex; gap: 0; overflow-x: auto;
-  }
-  .tab-btn {
-    display: flex; align-items: center; gap: 7px;
-    padding: 0 20px; height: 48px;
-    font-size: 13px; font-weight: 500;
-    color: var(--muted);
-    border: none; background: none;
-    border-bottom: 2px solid transparent;
-    cursor: pointer; white-space: nowrap;
-    transition: color 0.18s, border-color 0.18s;
-    font-family: 'DM Sans', sans-serif;
-  }
-  .tab-btn:hover { color: rgba(200,220,250,0.75); }
-  .tab-btn.active { color: var(--blue); border-bottom-color: var(--blue); }
-  .tab-count {
-    display: inline-flex; align-items: center; justify-content: center;
-    min-width: 20px; height: 20px; padding: 0 5px;
-    border-radius: 100px; background: rgba(55,138,221,0.15);
-    font-size: 11px; font-weight: 600; color: var(--blue);
-  }
+.sidebar {
+  width: 240px;
+  flex-shrink: 0;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
 
-  /* ── Page ── */
-  .page { position:relative; z-index:1; padding:2rem; max-width:1400px; margin:0 auto; }
+.sidebar-brand {
+  padding: 24px 20px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 
-  /* ── Tab sections ── */
-  .tab-section { display:none; }
-  .tab-section.active { display:block; }
+.brand-icon {
+  width: 32px; height: 32px;
+  background: var(--text);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
 
-  /* ── Section label ── */
-  .section-label {
-    font-size:11px; font-weight:500; letter-spacing:0.08em;
-    text-transform:uppercase; color:rgba(150,175,220,0.35);
-    margin-bottom:0.75rem; margin-top:0.25rem;
-  }
+.brand-text {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.3;
+}
+.brand-text span {
+  display: block;
+  font-family: 'Instrument Sans', sans-serif;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-3);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
 
-  /* ── Stat cards ── */
-  .stat-grid {
-    display:grid;
-    grid-template-columns:repeat(6,1fr);
-    gap:12px; margin-bottom:1.5rem;
-  }
-  .stat-card {
-    background:var(--surface);
-    border:1px solid var(--border);
-    border-radius:14px; padding:1.1rem 1.25rem;
-    backdrop-filter:blur(8px);
-  }
-  .stat-card-label { font-size:11px; font-weight:500; letter-spacing:0.05em; text-transform:uppercase; color:var(--muted); margin-bottom:8px; }
-  .stat-card-value { font-family:'DM Serif Display',Georgia,serif; font-size:30px; color:var(--text); line-height:1; }
-  .stat-card.danger  { border-color:rgba(226,75,74,0.25); } .stat-card.danger  .stat-card-value { color:var(--red); }
-  .stat-card.warning { border-color:rgba(239,159,39,0.25); } .stat-card.warning .stat-card-value { color:var(--amber); }
-  .stat-card.success { border-color:rgba(29,158,117,0.25); } .stat-card.success .stat-card-value { color:var(--green); }
-  .stat-card.info    { border-color:rgba(55,138,221,0.25); } .stat-card.info    .stat-card-value { color:var(--blue); }
+.sidebar-nav {
+  flex: 1;
+  padding: 12px 12px;
+}
 
-  /* ── Charts ── */
-  .chart-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:1.5rem; }
-  .chart-box {
-    background:var(--surface); border:1px solid var(--border);
-    border-radius:16px; padding:1.5rem; backdrop-filter:blur(8px);
-  }
-  .chart-box h3 { font-size:13px; font-weight:500; letter-spacing:0.05em; text-transform:uppercase; color:var(--muted); margin-bottom:1.25rem; }
-  .chart-box canvas { max-height:260px; }
+.nav-section-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-4);
+  padding: 16px 8px 6px;
+}
 
-  /* ── Panel ── */
-  .panel {
-    background:var(--surface); border:1px solid var(--border);
-    border-radius:16px; padding:1.5rem; backdrop-filter:blur(8px); margin-bottom:1.25rem;
-  }
-  .panel-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:1.25rem; }
-  .panel-header h3 { font-size:13px; font-weight:500; letter-spacing:0.05em; text-transform:uppercase; color:var(--muted); margin:0; }
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 10px;
+  border-radius: 7px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--text-2);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  font-family: 'Instrument Sans', sans-serif;
+  position: relative;
+}
 
-  /* ── Form inside panel ── */
-  .form-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:12px; margin-bottom:1rem; }
-  .form-field { display:flex; flex-direction:column; gap:6px; }
-  .form-field label { font-size:11px; font-weight:500; letter-spacing:0.05em; text-transform:uppercase; color:var(--muted); }
-  .form-field input, .form-field textarea, .form-field select {
-    background:rgba(4,14,38,0.7); border:1px solid var(--border);
-    border-radius:8px; padding:8px 12px;
-    font-size:13.5px; color:var(--text);
-    font-family:'DM Sans',sans-serif;
-    transition:border-color 0.18s;
-    outline:none;
-  }
-  .form-field input:focus, .form-field textarea:focus, .form-field select:focus { border-color:var(--border-hi); }
-  .form-field textarea { resize:vertical; min-height:80px; }
-  .form-field select option { background:#0a1836; color:var(--text); }
+.nav-item:hover { background: var(--bg); color: var(--text); }
+.nav-item.active { background: var(--text); color: #fff; }
+.nav-item.active .nav-icon { color: #fff; opacity: 0.8; }
 
-  /* ── Tables ── */
-  .table-wrap { overflow-x:auto; }
-  table { width:100%; border-collapse:collapse; }
-  th { font-size:11px; font-weight:500; letter-spacing:0.07em; text-transform:uppercase; color:rgba(130,160,220,0.5); padding:8px 12px; text-align:left; border-bottom:1px solid rgba(55,138,221,0.12); white-space:nowrap; }
-  td { padding:11px 12px; font-size:13.5px; color:rgba(200,220,250,0.75); border-bottom:1px solid rgba(55,138,221,0.07); }
-  tr:last-child td { border-bottom:none; }
-  tr.warning-row td { background:rgba(239,159,39,0.04); }
-  .empty-row td { text-align:center; color:rgba(150,175,220,0.3); padding:2rem; font-size:13px; }
+.nav-icon { width: 15px; height: 15px; flex-shrink: 0; opacity: 0.6; }
+.nav-item.active .nav-icon { opacity: 0.85; }
 
-  /* ── Badges ── */
-  .badge {
-    display:inline-flex; align-items:center; gap:5px;
-    padding:3px 10px; border-radius:100px;
-    font-size:11px; font-weight:500; letter-spacing:0.04em;
-  }
-  .badge-red    { background:rgba(163,45,45,0.15);   border:1px solid rgba(226,75,74,0.3);   color:var(--red); }
-  .badge-green  { background:rgba(15,110,86,0.15);   border:1px solid rgba(29,158,117,0.3);  color:var(--green); }
-  .badge-amber  { background:rgba(186,117,23,0.15);  border:1px solid rgba(239,159,39,0.3);  color:var(--amber); }
-  .badge-blue   { background:rgba(24,95,165,0.15);   border:1px solid rgba(55,138,221,0.3);  color:#85B7EB; }
-  .badge-purple { background:rgba(83,74,183,0.15);   border:1px solid rgba(127,119,221,0.3); color:var(--purple); }
-  .tag-dot { width:5px; height:5px; border-radius:50%; background:currentColor; }
+.nav-badge {
+  margin-left: auto;
+  background: rgba(0,0,0,0.08);
+  border-radius: 100px;
+  padding: 1px 7px;
+  font-size: 10.5px;
+  font-weight: 600;
+  min-width: 20px;
+  text-align: center;
+}
+.nav-item.active .nav-badge { background: rgba(255,255,255,0.2); }
 
-  /* ── Buttons ── */
-  .rp-btn {
-    display:inline-flex; align-items:center; gap:6px;
-    padding:6px 12px; border-radius:8px;
-    font-size:12px; font-weight:500;
-    font-family:'DM Sans',sans-serif;
-    text-decoration:none; border:1px solid transparent;
-    cursor:pointer; transition:all 0.18s; letter-spacing:0.01em;
-    background:none;
-  }
-  .btn-green  { background:rgba(15,110,86,0.12);   color:var(--green);  border-color:rgba(29,158,117,0.3); }
-  .btn-green:hover  { background:rgba(15,110,86,0.22); }
-  .btn-red    { background:rgba(163,45,45,0.12);   color:var(--red);    border-color:rgba(226,75,74,0.3); }
-  .btn-red:hover    { background:rgba(163,45,45,0.22); }
-  .btn-blue   { background:linear-gradient(135deg,#185FA5,#378ADD); color:#fff; box-shadow:0 3px 12px rgba(24,95,165,0.35); }
-  .btn-blue:hover   { box-shadow:0 5px 18px rgba(24,95,165,0.5); transform:translateY(-1px); }
-  .btn-purple { background:rgba(83,74,183,0.12);   color:var(--purple); border-color:rgba(127,119,221,0.3); }
-  .btn-purple:hover { background:rgba(83,74,183,0.22); }
-  .btn-amber  { background:rgba(186,117,23,0.12);  color:var(--amber);  border-color:rgba(239,159,39,0.3); }
-  .btn-amber:hover  { background:rgba(186,117,23,0.22); }
+.sidebar-footer {
+  padding: 12px;
+  border-top: 1px solid var(--border);
+}
 
-  /* confirm delete */
-  .btn-red-confirm { display:inline-flex; align-items:center; gap:6px; padding:6px 12px; border-radius:8px; font-size:12px; font-weight:500; font-family:'DM Sans',sans-serif; text-decoration:none; cursor:pointer; transition:all 0.18s; background:rgba(163,45,45,0.12); color:var(--red); border:1px solid rgba(226,75,74,0.3); }
-  .btn-red-confirm:hover { background:rgba(163,45,45,0.22); }
+.admin-chip {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 12px;
+  background: var(--bg);
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
 
-  /* ── Flash messages ── */
-  .flash-list { list-style:none; margin-bottom:1.25rem; display:flex; flex-direction:column; gap:8px; }
-  .flash-item {
-    display:flex; align-items:center; gap:10px;
-    padding:10px 16px; border-radius:10px;
-    font-size:13.5px;
-    background:rgba(55,138,221,0.1); border:1px solid rgba(55,138,221,0.25); color:#85B7EB;
-  }
+.admin-avatar {
+  width: 28px; height: 28px;
+  background: var(--text);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: white;
+  flex-shrink: 0;
+  letter-spacing: 0.02em;
+}
 
-  /* ── Divider ── */
-  .rp-divider { height:1px; background:rgba(55,138,221,0.1); margin:1.25rem 0; }
+.admin-info { flex: 1; min-width: 0; }
+.admin-name { font-size: 12.5px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.admin-role-label { font-size: 10px; color: var(--text-3); letter-spacing: 0.03em; }
 
-  /* ── Footer ── */
-  .footer-btns { display:flex; gap:10px; margin-top:1.25rem; padding-top:1.25rem; border-top:1px solid rgba(55,138,221,0.1); }
+.logout-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 7px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--red);
+  background: var(--red-bg);
+  border: 1px solid var(--red-bd);
+  cursor: pointer;
+  text-decoration: none;
+  font-family: 'Instrument Sans', sans-serif;
+  transition: background 0.15s;
+  justify-content: center;
+}
+.logout-btn:hover { background: #fde5e5; }
 
-  /* ── Monospace ── */
-  .mono { font-family:monospace; font-size:13px; }
+.main { flex: 1; min-width: 0; overflow-x: hidden; }
 
-  /* ── Responsive ── */
-  @media(max-width:1100px) { .stat-grid{grid-template-columns:repeat(3,1fr);} .chart-grid{grid-template-columns:1fr;} }
-  @media(max-width:700px)  { .stat-grid{grid-template-columns:repeat(2,1fr);} .page{padding:1rem;} }
+.topbar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0 28px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.topbar-title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 17px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.topbar-right { display: flex; align-items: center; gap: 10px; }
+
+.status-dot {
+  width: 7px; height: 7px;
+  background: var(--green);
+  border-radius: 50%;
+  animation: pulse-green 2.5s ease-in-out infinite;
+}
+@keyframes pulse-green {
+  0%,100% { opacity:1; transform:scale(1); }
+  50% { opacity:0.5; transform:scale(0.75); }
+}
+
+.topbar-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  background: var(--green-bg);
+  border: 1px solid var(--green-bd);
+  border-radius: 100px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--green);
+  letter-spacing: 0.04em;
+}
+
+.page { padding: 24px 28px; max-width: 1280px; }
+
+.tab-section { display: none; }
+.tab-section.active { display: block; }
+
+.page-header { margin-bottom: 22px; }
+.page-title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 3px;
+}
+.page-sub { font-size: 13px; color: var(--text-3); }
+
+.divider { height: 1px; background: var(--border); margin: 20px 0; }
+
+.flash-list { list-style: none; margin-bottom: 18px; display: flex; flex-direction: column; gap: 8px; }
+.flash-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  font-size: 13.5px;
+  background: var(--blue-bg);
+  border: 1px solid var(--blue-bd);
+  color: var(--blue);
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 10px;
+  margin-bottom: 22px;
+}
+
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.18s, transform 0.18s;
+}
+.stat-card:hover { box-shadow: var(--shadow); transform: translateY(-1px); }
+
+.stat-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-4);
+  margin-bottom: 8px;
+}
+
+.stat-value {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 28px;
+  font-weight: 500;
+  color: var(--text);
+  line-height: 1;
+}
+
+.stat-card.c-blue  { border-top: 2.5px solid var(--blue); }  .stat-card.c-blue  .stat-value { color: var(--blue); }
+.stat-card.c-green { border-top: 2.5px solid var(--green); } .stat-card.c-green .stat-value { color: var(--green); }
+.stat-card.c-amber { border-top: 2.5px solid var(--amber); } .stat-card.c-amber .stat-value { color: var(--amber); }
+.stat-card.c-red   { border-top: 2.5px solid var(--red); }   .stat-card.c-red   .stat-value { color: var(--red); }
+.stat-card.c-purple{ border-top: 2.5px solid var(--purple); } .stat-card.c-purple .stat-value { color: var(--purple); }
+
+.section-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-4);
+  margin-bottom: 10px;
+  margin-top: 4px;
+}
+
+.chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 22px; }
+
+.chart-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 22px;
+  box-shadow: var(--shadow-sm);
+}
+
+.chart-title {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  margin-bottom: 18px;
+}
+
+.chart-box canvas { max-height: 240px; }
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface2);
+}
+
+.panel-head-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text);
+}
+
+.panel-body { padding: 20px; }
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.form-field { display: flex; flex-direction: column; gap: 5px; }
+
+.form-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+.form-field input,
+.form-field textarea,
+.form-field select {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 8px 11px;
+  font-size: 13.5px;
+  color: var(--text);
+  font-family: 'Instrument Sans', sans-serif;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  outline: none;
+}
+
+.form-field input:focus,
+.form-field textarea:focus,
+.form-field select:focus {
+  border-color: var(--border-hi);
+  box-shadow: 0 0 0 3px rgba(37,99,168,0.08);
+}
+
+.form-field textarea { resize: vertical; min-height: 80px; }
+
+.table-wrap { overflow-x: auto; }
+
+table { width: 100%; border-collapse: collapse; }
+
+thead tr { background: var(--surface2); }
+
+th {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  padding: 10px 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+td {
+  padding: 12px 16px;
+  font-size: 13.5px;
+  color: var(--text-2);
+  border-bottom: 1px solid var(--border);
+}
+
+tr:last-child td { border-bottom: none; }
+
+tbody tr { transition: background 0.12s; }
+tbody tr:hover { background: var(--bg); }
+
+tr.warning-row td { background: var(--amber-bg); }
+tr.warning-row:hover td { background: #fef0d5; }
+
+.empty-row td {
+  text-align: center;
+  color: var(--text-4);
+  padding: 2.5rem;
+  font-size: 13px;
+  font-style: italic;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 100px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+.dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+
+.badge-blue   { background: var(--blue-bg);   border: 1px solid var(--blue-bd);   color: var(--blue); }
+.badge-green  { background: var(--green-bg);  border: 1px solid var(--green-bd);  color: var(--green); }
+.badge-amber  { background: var(--amber-bg);  border: 1px solid var(--amber-bd);  color: var(--amber); }
+.badge-red    { background: var(--red-bg);    border: 1px solid var(--red-bd);    color: var(--red); }
+.badge-purple { background: var(--purple-bg); border: 1px solid var(--purple-bd); color: var(--purple); }
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: 'Instrument Sans', sans-serif;
+  text-decoration: none;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s;
+  letter-spacing: 0.01em;
+  background: none;
+  line-height: 1;
+}
+
+.btn-primary {
+  background: var(--text);
+  color: #fff;
+  border-color: var(--text);
+  box-shadow: var(--shadow-sm);
+}
+.btn-primary:hover { background: #2d2520; box-shadow: var(--shadow); }
+
+.btn-blue   { background: var(--blue-bg);   color: var(--blue);   border-color: var(--blue-bd); }
+.btn-blue:hover   { background: #ddeaf8; }
+
+.btn-green  { background: var(--green-bg);  color: var(--green);  border-color: var(--green-bd); }
+.btn-green:hover  { background: #d9f0e7; }
+
+.btn-red    { background: var(--red-bg);    color: var(--red);    border-color: var(--red-bd); }
+.btn-red:hover    { background: #fde0e0; }
+
+.btn-amber  { background: var(--amber-bg);  color: var(--amber);  border-color: var(--amber-bd); }
+.btn-amber:hover  { background: #fdebd0; }
+
+.btn-ghost  { background: transparent; color: var(--text-3); border-color: var(--border); }
+.btn-ghost:hover  { background: var(--bg); color: var(--text); }
+
+.btn-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+
+.mono { font-family: 'Courier New', monospace; font-size: 12.5px; }
+
+.muted-tag { font-size: 11.5px; color: var(--text-4); font-style: italic; }
+
+/* ── Audit Log Visualization Styles ── */
+.log-viz-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.log-stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.log-stat-icon {
+  width: 38px; height: 38px;
+  border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+.log-stat-icon.red    { background: var(--red-bg);    color: var(--red); }
+.log-stat-icon.green  { background: var(--green-bg);  color: var(--green); }
+.log-stat-icon.amber  { background: var(--amber-bg);  color: var(--amber); }
+
+.log-stat-body {}
+.log-stat-value {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 24px;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--text);
+}
+.log-stat-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-4);
+  margin-top: 3px;
+}
+
+.log-chart-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.log-chart-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 22px;
+  box-shadow: var(--shadow-sm);
+}
+
+.log-chart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.log-chart-title {
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+.log-legend {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.log-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--text-3);
+  font-weight: 500;
+}
+
+.log-legend-dot {
+  width: 8px; height: 8px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+/* Timeline bar */
+.log-timeline-wrap {
+  position: relative;
+  height: 200px;
+}
+
+/* Donut chart wrap */
+.log-donut-wrap {
+  position: relative;
+  height: 200px;
+}
+
+/* Action stream list */
+.log-stream {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.log-stream-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+}
+.log-stream-item:last-child { border-bottom: none; }
+
+.log-stream-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  margin-top: 4px;
+  flex-shrink: 0;
+}
+
+.log-stream-dot.red    { background: var(--red); }
+.log-stream-dot.green  { background: var(--green); }
+.log-stream-dot.amber  { background: var(--amber); }
+.log-stream-dot.blue   { background: var(--blue); }
+
+.log-stream-body { flex: 1; min-width: 0; }
+.log-stream-action { font-size: 12px; font-weight: 600; color: var(--text); }
+.log-stream-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 1px;
+}
+.log-stream-email { font-size: 11px; color: var(--text-3); font-family: 'Courier New', monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 160px; }
+.log-stream-ip    { font-size: 11px; color: var(--text-4); font-family: 'Courier New', monospace; }
+.log-stream-time  { font-size: 10.5px; color: var(--text-4); margin-left: auto; white-space: nowrap; flex-shrink: 0; }
+
+/* Filter tabs */
+.log-filter-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 3px;
+  margin-bottom: 16px;
+}
+
+.log-filter-tab {
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-3);
+  cursor: pointer;
+  border: none;
+  background: none;
+  font-family: 'Instrument Sans', sans-serif;
+  transition: background 0.15s, color 0.15s;
+  letter-spacing: 0.02em;
+}
+
+.log-filter-tab.active { background: var(--surface); color: var(--text); box-shadow: var(--shadow-sm); }
+.log-filter-tab:hover:not(.active) { color: var(--text-2); }
+
+/* Heatmap */
+.log-heatmap-grid {
+  display: grid;
+  grid-template-columns: repeat(24, 1fr);
+  gap: 3px;
+  margin-top: 8px;
+}
+
+.heatmap-cell {
+  height: 24px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+  position: relative;
+}
+.heatmap-cell:hover { transform: scaleY(1.15); opacity: 0.85; }
+
+.heatmap-labels {
+  display: grid;
+  grid-template-columns: repeat(24, 1fr);
+  gap: 3px;
+  margin-top: 4px;
+}
+.heatmap-label {
+  font-size: 9px;
+  color: var(--text-4);
+  text-align: center;
+  font-weight: 500;
+}
+
+/* ── Responsive ── */
+@media(max-width:1200px) {
+  .stat-grid { grid-template-columns: repeat(4,1fr); }
+  .chart-grid { grid-template-columns: 1fr; }
+  .log-viz-grid { grid-template-columns: 1fr 1fr 1fr; }
+  .log-chart-grid { grid-template-columns: 1fr; }
+}
+@media(max-width:900px) {
+  .stat-grid { grid-template-columns: repeat(3,1fr); }
+  .sidebar { display: none; }
+  .page { padding: 16px; }
+  .log-viz-grid { grid-template-columns: 1fr; }
+}
+@media(max-width:600px) {
+  .stat-grid { grid-template-columns: repeat(2,1fr); }
+  .log-viz-grid { grid-template-columns: 1fr; }
+}
 </style>
 </head>
 <body>
 
-<div class="rp-grid"></div>
-<div class="rp-glow"></div>
-<div class="rp-glow2"></div>
+<div class="shell">
 
-<!-- ══════════════════════════════════════════ NAVBAR -->
-<nav class="navbar">
-  <div class="navbar-brand">
-    <div class="navbar-icon">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-        <path d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.35C16.5 22.15 20 17.25 20 12V6L12 2z"
-              fill="rgba(255,255,255,0.15)" stroke="white" stroke-width="1.5" stroke-linejoin="round"/>
-        <path d="M9 12l2 2 4-4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-    </div>
-    <span class="navbar-title">Recruitment Portal — Admin</span>
-  </div>
-  <div class="navbar-right">
-    <div class="navbar-badge">
-      <span class="pulse-dot"></span>
-      Admin Panel
-    </div>
-    <a href="/logout" class="rp-btn btn-purple" style="margin:0;">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
-        <path d="M16 17l5-5-5-5M21 12H9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-      </svg>
-      Logout
-    </a>
-  </div>
-</nav>
+  <!-- ══════════════════════════════ SIDEBAR -->
+  <aside class="sidebar">
 
-<!-- ══════════════════════════════════════════ TAB NAV -->
-<div class="tab-nav">
-  <button class="tab-btn active" data-tab="overview">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.7"/><rect x="14" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.7"/><rect x="3" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.7"/><rect x="14" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.7"/></svg>
-    Overview
-  </button>
-  <button class="tab-btn" data-tab="users">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.7"/><path d="M4 20c0-4 3.582-7 8-7s8 3 8 7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-    Users
-    <span class="tab-count">{{ total_users }}</span>
-  </button>
-  <button class="tab-btn" data-tab="employers">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><rect x="2" y="7" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2" stroke="currentColor" stroke-width="1.7"/></svg>
-    Employers
-    <span class="tab-count">{{ total_employers }}</span>
-  </button>
-  <button class="tab-btn" data-tab="jobs">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" stroke="currentColor" stroke-width="1.7"/><rect x="9" y="3" width="6" height="4" rx="1" stroke="currentColor" stroke-width="1.7"/></svg>
-    Jobs
-    <span class="tab-count">{{ jobs|length }}</span>
-  </button>
-  <button class="tab-btn" data-tab="applications">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="currentColor" stroke-width="1.7"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-    Applications
-    <span class="tab-count">{{ total_apps }}</span>
-  </button>
-  <button class="tab-btn" data-tab="security">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.35C16.5 22.15 20 17.25 20 12V6L12 2z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
-    Security
-  </button>
-  <button class="tab-btn" data-tab="logs">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h16M4 18h10" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-    Audit Logs
-  </button>
-</div>
-
-<!-- ══════════════════════════════════════════ PAGE -->
-<div class="page">
-
-  <!-- Flash messages -->
-  {% with messages = get_flashed_messages() %}
-  {% if messages %}
-  <ul class="flash-list">
-    {% for msg in messages %}
-    <li class="flash-item">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.8"/><path d="M12 8v4M12 16h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-      {{ msg }}
-    </li>
-    {% endfor %}
-  </ul>
-  {% endif %}
-  {% endwith %}
-
-  <!-- ════════════════════════════ TAB: OVERVIEW -->
-  <div id="tab-overview" class="tab-section active">
-
-    <div class="section-label">System Overview</div>
-    <div class="stat-grid">
-      <div class="stat-card info">
-        <div class="stat-card-label">Total Users</div>
-        <div class="stat-card-value">{{ total_users }}</div>
+    <div class="sidebar-brand">
+      <div class="brand-icon">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+          <path d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.35C16.5 22.15 20 17.25 20 12V6L12 2z" fill="white" opacity="0.2"/>
+          <path d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.35C16.5 22.15 20 17.25 20 12V6L12 2z" stroke="white" stroke-width="1.4" stroke-linejoin="round"/>
+          <path d="M9 12l2 2 4-4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
       </div>
-      <div class="stat-card">
-        <div class="stat-card-label">Employers</div>
-        <div class="stat-card-value">{{ total_employers }}</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-card-label">Candidates</div>
-        <div class="stat-card-value">{{ total_candidates }}</div>
-      </div>
-      <div class="stat-card danger">
-        <div class="stat-card-label">Failed Logins</div>
-        <div class="stat-card-value">{{ failed_logins }}</div>
-      </div>
-      <div class="stat-card warning">
-        <div class="stat-card-label">OTP Failures</div>
-        <div class="stat-card-value">{{ otp_failures }}</div>
-      </div>
-      <div class="stat-card danger">
-        <div class="stat-card-label">Locked Accounts</div>
-        <div class="stat-card-value">{{ locked_accounts }}</div>
-      </div>
-      <div class="stat-card success">
-        <div class="stat-card-label">Total Applications</div>
-        <div class="stat-card-value">{{ total_apps }}</div>
-      </div>
-      <div class="stat-card warning">
-        <div class="stat-card-label">Blocked Files</div>
-        <div class="stat-card-value">{{ blocked_files }}</div>
-      </div>
-      <div class="stat-card success">
-        <div class="stat-card-label">Shortlisted</div>
-        <div class="stat-card-value">{{ shortlisted }}</div>
-      </div>
-      <div class="stat-card danger">
-        <div class="stat-card-label">Rejected</div>
-        <div class="stat-card-value">{{ rejected }}</div>
-      </div>
-      <div class="stat-card amber" style="border-color:rgba(239,159,39,0.25);">
-        <div class="stat-card-label">Pending</div>
-        <div class="stat-card-value" style="color:var(--amber);">{{ applied }}</div>
-      </div>
-      <div class="stat-card info">
-        <div class="stat-card-label">Jobs Posted</div>
-        <div class="stat-card-value">{{ jobs|length }}</div>
+      <div class="brand-text">
+        Recruitment Portal
+        <span>Admin Console</span>
       </div>
     </div>
 
-    <div class="section-label">Analytics</div>
-    <div class="chart-grid">
-      <div class="chart-box">
-        <h3>Application Status</h3>
-        <canvas id="appChart"></canvas>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Main</div>
+
+      <button class="nav-item active" data-tab="overview">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none">
+          <rect x="3" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.7"/>
+          <rect x="14" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.7"/>
+          <rect x="3" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.7"/>
+          <rect x="14" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.7"/>
+        </svg>
+        Overview
+      </button>
+
+      <button class="nav-item" data-tab="users">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.7"/>
+          <path d="M4 20c0-4 3.582-7 8-7s8 3 8 7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+        </svg>
+        Users
+        <span class="nav-badge">{{ total_users }}</span>
+      </button>
+
+      <button class="nav-item" data-tab="employers">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none">
+          <rect x="2" y="7" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.7"/>
+          <path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2" stroke="currentColor" stroke-width="1.7"/>
+        </svg>
+        Employers
+        <span class="nav-badge">{{ total_employers }}</span>
+      </button>
+
+      <button class="nav-item" data-tab="jobs">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none">
+          <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" stroke="currentColor" stroke-width="1.7"/>
+          <rect x="9" y="3" width="6" height="4" rx="1" stroke="currentColor" stroke-width="1.7"/>
+        </svg>
+        Jobs
+        <span class="nav-badge">{{ jobs|length }}</span>
+      </button>
+
+      <button class="nav-item" data-tab="applications">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none">
+          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="currentColor" stroke-width="1.7"/>
+          <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+        </svg>
+        Applications
+        <span class="nav-badge">{{ total_apps }}</span>
+      </button>
+
+      <div class="nav-section-label">Security</div>
+
+      <button class="nav-item" data-tab="security">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none">
+          <path d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.35C16.5 22.15 20 17.25 20 12V6L12 2z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+          <path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Security
+      </button>
+
+      <button class="nav-item" data-tab="logs">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none">
+          <path d="M4 6h16M4 12h16M4 18h10" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+        </svg>
+        Audit Logs
+      </button>
+
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="admin-chip">
+        <div class="admin-avatar">AD</div>
+        <div class="admin-info">
+          <div class="admin-name">Administrator</div>
+          <div class="admin-role-label">Super Admin</div>
+        </div>
       </div>
-      <div class="chart-box">
-        <h3>Threat Distribution</h3>
-        <canvas id="threatChart"></canvas>
-      </div>
+      <a href="/logout" class="logout-btn">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+          <path d="M16 17l5-5-5-5M21 12H9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+        Sign Out
+      </a>
     </div>
 
-  </div><!-- /overview -->
+  </aside>
 
-  <!-- ════════════════════════════ TAB: USERS -->
-  <div id="tab-users" class="tab-section">
+  <!-- ══════════════════════════════ MAIN -->
+  <div class="main">
 
-    <div class="section-label">All Users</div>
-    <div class="panel">
-      <div class="panel-header">
-        <h3>User Accounts</h3>
+    <header class="topbar">
+      <span class="topbar-title" id="topbar-title">Overview</span>
+      <div class="topbar-right">
+        <div class="topbar-badge">
+          <span class="status-dot"></span>
+          System Online
+        </div>
+        <a href="/admin/export_logs" class="btn btn-ghost">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+            <path d="M12 4v12M8 12l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M4 20h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+          Export Logs
+        </a>
       </div>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Role</th>
-              <th>Company</th>
-              <th>Created By</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for u in users %}
-            <tr>
-              <td>{{ u.name }}</td>
-              <td class="mono" style="color:rgba(150,175,220,0.7);">{{ u.email }}</td>
-              <td>
-                {% if u.role == "admin" %}
-                  <span class="badge badge-purple"><span class="tag-dot"></span>Admin</span>
-                {% elif u.role == "employer" %}
-                  <span class="badge badge-blue"><span class="tag-dot"></span>Employer</span>
-                {% else %}
-                  <span class="badge badge-green"><span class="tag-dot"></span>Candidate</span>
-                {% endif %}
-              </td>
-              <td style="color:rgba(150,175,220,0.55);">{{ u.company or "—" }}</td>
-              <td style="color:rgba(150,175,220,0.45); font-size:12px;">{{ u.created_by or "—" }}</td>
-              <td>
-                {% if u.role != "admin" %}
-                <a href="/admin/delete_user/{{ u._id }}"
-                   class="rp-btn btn-red"
-                   onclick="return confirm('Delete {{ u.email }}? This cannot be undone.')">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-                    <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
-                  Delete
-                </a>
-                {% else %}
-                <span style="color:rgba(150,175,220,0.3); font-size:12px;">Protected</span>
-                {% endif %}
-              </td>
-            </tr>
-            {% else %}
-            <tr class="empty-row"><td colspan="6">No users found</td></tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </div>
+    </header>
 
-  </div><!-- /users -->
+    <div class="page">
 
-  <!-- ════════════════════════════ TAB: EMPLOYERS (Create) -->
-  <div id="tab-employers" class="tab-section">
+      {% with messages = get_flashed_messages() %}
+      {% if messages %}
+      <ul class="flash-list">
+        {% for msg in messages %}
+        <li class="flash-item">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.8"/>
+            <path d="M12 8v4M12 16h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+          {{ msg }}
+        </li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+      {% endwith %}
 
-    <div class="section-label">Create Employer Account</div>
-    <div class="panel">
-      <div class="panel-header">
-        <h3>New Employer</h3>
-      </div>
-      <!-- BUG FIX: route is /admin/create_employer -->
-      <form method="POST" action="/admin/create_employer">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <div class="form-grid">
-          <div class="form-field">
-            <label>Full Name</label>
-            <input type="text" name="name" placeholder="Jane Smith" required maxlength="100">
+      <!-- ══════════════ TAB: OVERVIEW -->
+      <div id="tab-overview" class="tab-section active">
+        <div class="page-header">
+          <div class="page-title">Dashboard Overview</div>
+          <div class="page-sub">Real-time snapshot of the recruitment portal's activity and health.</div>
+        </div>
+
+        <div class="section-label">People & Activity</div>
+        <div class="stat-grid">
+          <div class="stat-card c-blue">
+            <div class="stat-label">Total Users</div>
+            <div class="stat-value">{{ total_users }}</div>
           </div>
-          <div class="form-field">
-            <label>Email Address</label>
-            <input type="email" name="email" placeholder="jane@acme.com" required maxlength="254">
+          <div class="stat-card">
+            <div class="stat-label">Employers</div>
+            <div class="stat-value">{{ total_employers }}</div>
           </div>
-          <div class="form-field">
-            <label>Company Name</label>
-            <input type="text" name="company" placeholder="Acme Corp" required maxlength="200">
+          <div class="stat-card">
+            <div class="stat-label">Candidates</div>
+            <div class="stat-value">{{ total_candidates }}</div>
+          </div>
+          <div class="stat-card c-green">
+            <div class="stat-label">Applications</div>
+            <div class="stat-value">{{ total_apps }}</div>
+          </div>
+          <div class="stat-card c-green">
+            <div class="stat-label">Shortlisted</div>
+            <div class="stat-value">{{ shortlisted }}</div>
+          </div>
+          <div class="stat-card c-amber">
+            <div class="stat-label">Pending</div>
+            <div class="stat-value">{{ applied }}</div>
+          </div>
+          <div class="stat-card c-red">
+            <div class="stat-label">Rejected</div>
+            <div class="stat-value">{{ rejected }}</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Jobs Posted</div>
+            <div class="stat-value">{{ jobs|length }}</div>
+          </div>
+          <div class="stat-card c-red">
+            <div class="stat-label">Failed Logins</div>
+            <div class="stat-value">{{ failed_logins }}</div>
+          </div>
+          <div class="stat-card c-amber">
+            <div class="stat-label">OTP Failures</div>
+            <div class="stat-value">{{ otp_failures }}</div>
+          </div>
+          <div class="stat-card c-red">
+            <div class="stat-label">Locked Accounts</div>
+            <div class="stat-value">{{ locked_accounts }}</div>
+          </div>
+          <div class="stat-card c-amber">
+            <div class="stat-label">Blocked Files</div>
+            <div class="stat-value">{{ blocked_files }}</div>
           </div>
         </div>
-        <button type="submit" class="rp-btn btn-blue">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
-            <circle cx="12" cy="12" r="10" stroke="white" stroke-width="1.8"/>
-            <path d="M12 8v8M8 12h8" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
-          </svg>
-          Create Employer & Send Credentials
-        </button>
-      </form>
 
-      <div class="rp-divider"></div>
-
-      <!-- Employer list -->
-      <div class="panel-header" style="margin-bottom:1rem;">
-        <h3>Existing Employers ({{ total_employers }})</h3>
-      </div>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Company</th>
-              <th>Created By</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for u in users if u.role == "employer" %}
-            <tr>
-              <td>{{ u.name }}</td>
-              <td class="mono" style="color:rgba(150,175,220,0.7);">{{ u.email }}</td>
-              <td>{{ u.company or "—" }}</td>
-              <td style="color:rgba(150,175,220,0.45); font-size:12px;">{{ u.created_by or "—" }}</td>
-              <td>
-                <a href="/admin/delete_user/{{ u._id }}"
-                   class="rp-btn btn-red"
-                   onclick="return confirm('Delete employer {{ u.email }}? This cannot be undone.')">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-                    <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
-                  Delete
-                </a>
-              </td>
-            </tr>
-            {% else %}
-            <tr class="empty-row"><td colspan="5">No employers yet</td></tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-  </div><!-- /employers -->
-
-  <!-- ════════════════════════════ TAB: JOBS -->
-  <div id="tab-jobs" class="tab-section">
-
-    <div class="section-label">Post a New Job</div>
-    <div class="panel">
-      <div class="panel-header">
-        <h3>Add Job Listing</h3>
-      </div>
-      <!-- BUG FIX: admin can post jobs — route /add_job with company from form -->
-      <form method="POST" action="/add_job">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <div class="form-grid">
-          <div class="form-field">
-            <label>Job Title</label>
-            <input type="text" name="title" placeholder="Software Engineer" required maxlength="200">
+        <div class="section-label">Analytics</div>
+        <div class="chart-grid">
+          <div class="chart-box">
+            <div class="chart-title">Application Status Distribution</div>
+            <canvas id="appChart"></canvas>
           </div>
-          <div class="form-field">
-            <label>Company</label>
-            <input type="text" name="company" placeholder="Acme Corp" maxlength="200">
-          </div>
-          <div class="form-field">
-            <label>Salary</label>
-            <input type="text" name="salary" placeholder="₹8–12 LPA" maxlength="50">
-          </div>
-          <div class="form-field" style="grid-column:1/-1;">
-            <label>Description</label>
-            <textarea name="description" placeholder="Job description..." maxlength="2000"></textarea>
+          <div class="chart-box">
+            <div class="chart-title">Security Threat Distribution</div>
+            <canvas id="threatChart"></canvas>
           </div>
         </div>
-        <button type="submit" class="rp-btn btn-blue">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
-            <circle cx="12" cy="12" r="10" stroke="white" stroke-width="1.8"/>
-            <path d="M12 8v8M8 12h8" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
-          </svg>
-          Post Job
-        </button>
-      </form>
-
-      <div class="rp-divider"></div>
-
-      <div class="panel-header" style="margin-bottom:1rem;">
-        <h3>All Job Listings ({{ jobs|length }})</h3>
       </div>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Title</th>
-              <th>Company</th>
-              <th>Salary</th>
-              <th>Posted By</th>
-              <th>Description</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for job in jobs %}
-            <tr>
-              <td style="font-weight:500; color:var(--text);">{{ job.title }}</td>
-              <td>{{ job.company }}</td>
-              <td style="color:var(--green);">{{ job.salary or "—" }}</td>
-              <td class="mono" style="font-size:12px; color:rgba(150,175,220,0.55);">{{ job.employer_email }}</td>
-              <td style="max-width:280px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:rgba(150,175,220,0.5); font-size:12.5px;" title="{{ job.description }}">{{ job.description or "—" }}</td>
-            </tr>
-            {% else %}
-            <tr class="empty-row"><td colspan="5">No jobs posted yet</td></tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </div>
 
-  </div><!-- /jobs -->
+      <!-- ══════════════ TAB: USERS -->
+      <div id="tab-users" class="tab-section">
+        <div class="page-header">
+          <div class="page-title">User Accounts</div>
+          <div class="page-sub">Manage all registered users — candidates, employers and admins.</div>
+        </div>
 
-  <!-- ════════════════════════════ TAB: APPLICATIONS -->
-  <div id="tab-applications" class="tab-section">
-
-    <div class="section-label">Candidate Applications</div>
-    <div class="panel">
-      <div class="panel-header">
-        <h3>All Applications ({{ total_apps }})</h3>
-      </div>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Candidate</th>
-              <th>Job</th>
-              <th>Company</th>
-              <th>Resume</th>
-              <th>Status</th>
-              <!-- BUG FIX: Admin shortlist/reject routes added to app.py;
-                   removed broken /shortlist and /reject links that pointed to
-                   employer-only routes. Admin views status read-only. -->
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for app in applications %}
-            <tr>
-              <td>
-                <div style="font-weight:500; color:var(--text);">{{ app.user_name }}</div>
-                <div class="mono" style="font-size:12px; color:rgba(150,175,220,0.5);">{{ app.user_email }}</div>
-              </td>
-              <td style="color:rgba(200,220,250,0.8);">{{ app.job_title or app.job_id }}</td>
-              <td style="color:rgba(150,175,220,0.6);">{{ app.company or "—" }}</td>
-              <td style="color:rgba(150,175,220,0.5); font-size:12.5px;">{{ app.resume }}</td>
-              <td>
-                {# BUG FIX: app.py stores "Shortlisted"/"Rejected"/"Applied" (Title case) #}
-                {% if app.status == "Shortlisted" %}
-                  <span class="badge badge-green"><span class="tag-dot"></span>Shortlisted</span>
-                {% elif app.status == "Rejected" %}
-                  <span class="badge badge-red"><span class="tag-dot"></span>Rejected</span>
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-head-title">All Users ({{ total_users }})</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Role</th>
+                  <th>Company</th>
+                  <th>Created By</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for u in users %}
+                <tr>
+                  <td style="font-weight:500; color:var(--text);">{{ u.name }}</td>
+                  <td class="mono" style="color:var(--text-3);">{{ u.email }}</td>
+                  <td>
+                    {% if u.role == "admin" %}
+                      <span class="badge badge-purple"><span class="dot"></span>Admin</span>
+                    {% elif u.role == "employer" %}
+                      <span class="badge badge-blue"><span class="dot"></span>Employer</span>
+                    {% else %}
+                      <span class="badge badge-green"><span class="dot"></span>Candidate</span>
+                    {% endif %}
+                  </td>
+                  <td style="color:var(--text-3);">{{ u.company or "—" }}</td>
+                  <td style="color:var(--text-4); font-size:12px;">{{ u.created_by or "—" }}</td>
+                  <td>
+                    {% if u.role != "admin" %}
+                    <a href="/admin/delete_user/{{ u._id }}"
+                       class="btn btn-red"
+                       onclick="return confirm('Delete {{ u.email }}? This cannot be undone.')">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                        <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                      Delete
+                    </a>
+                    {% else %}
+                    <span class="muted-tag">Protected</span>
+                    {% endif %}
+                  </td>
+                </tr>
                 {% else %}
-                  <span class="badge badge-amber"><span class="tag-dot"></span>{{ app.status }}</span>
-                {% endif %}
-              </td>
-              <td>
-                {# BUG FIX: Admin uses /admin/shortlist and /admin/reject (new routes needed in app.py — see note) #}
-                <a href="/admin/shortlist/{{ app._id }}" class="rp-btn btn-green">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-                    <path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
-                  Shortlist
-                </a>
-                <a href="/admin/reject/{{ app._id }}" class="rp-btn btn-red">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-                    <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                  </svg>
-                  Reject
-                </a>
-              </td>
-            </tr>
-            {% else %}
-            <tr class="empty-row"><td colspan="6">No applications yet</td></tr>
-            {% endfor %}
-          </tbody>
-        </table>
+                <tr class="empty-row"><td colspan="6">No users found</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
-    </div>
 
-  </div><!-- /applications -->
+      <!-- ══════════════ TAB: EMPLOYERS -->
+      <div id="tab-employers" class="tab-section">
+        <div class="page-header">
+          <div class="page-title">Employer Accounts</div>
+          <div class="page-sub">Create employer accounts and manage existing ones. Credentials are sent by email.</div>
+        </div>
 
-  <!-- ════════════════════════════ TAB: SECURITY -->
-  <div id="tab-security" class="tab-section">
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-head-title">Create New Employer</span>
+          </div>
+          <div class="panel-body">
+            <form method="POST" action="/admin/create_employer">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <div class="form-grid">
+                <div class="form-field">
+                  <label class="form-label">Full Name</label>
+                  <input type="text" name="name" placeholder="Jane Smith" required maxlength="100">
+                </div>
+                <div class="form-field">
+                  <label class="form-label">Email Address</label>
+                  <input type="email" name="email" placeholder="jane@company.com" required maxlength="254">
+                </div>
+                <div class="form-field">
+                  <label class="form-label">Company Name</label>
+                  <input type="text" name="company" placeholder="Acme Corp" required maxlength="200">
+                </div>
+              </div>
+              <button type="submit" class="btn btn-primary">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="10" stroke="white" stroke-width="1.8"/>
+                  <path d="M12 8v8M8 12h8" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+                </svg>
+                Create Employer & Send Credentials
+              </button>
+            </form>
+          </div>
+        </div>
 
-    <div class="section-label">Threat Intelligence</div>
-    <div class="panel">
-      <div class="panel-header">
-        <h3>Suspicious IP Alerts</h3>
-      </div>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>IP Address</th>
-              <th>Failed Attempts</th>
-              <th>Risk Level</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for ip in suspicious_ips %}
-            <tr class="warning-row">
-              <td class="mono" style="color:var(--amber);">{{ ip._id }}</td>
-              <td>{{ ip.count }}</td>
-              <td><span class="badge badge-red"><span class="tag-dot"></span>HIGH</span></td>
-              <td><span class="badge badge-amber">Possible Brute Force</span></td>
-            </tr>
-            {% else %}
-            <tr class="empty-row"><td colspan="4">No suspicious IP activity found</td></tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <div class="panel">
-      <div class="panel-header">
-        <h3>Blocked IP Addresses</h3>
-      </div>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>IP Address</th>
-              <th>Blocked Until</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for ip in blocked_ips %}
-            <tr>
-              <td class="mono" style="color:var(--red);">{{ ip.ip }}</td>
-              {# BUG FIX: convert Unix timestamp to human-readable using Jinja filter #}
-              <td style="color:rgba(180,195,230,0.6);">
-                {{ ip.until | int | timestamp_to_str if ip.until else "—" }}
-              </td>
-              <td>
-                <a href="/unblock_ip/{{ ip._id }}" class="rp-btn btn-green">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-                    <path d="M8 11V7a4 4 0 018 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-                    <rect x="3" y="11" width="18" height="11" rx="2" stroke="currentColor" stroke-width="1.8"/>
-                  </svg>
-                  Unblock
-                </a>
-              </td>
-            </tr>
-            {% else %}
-            <tr class="empty-row"><td colspan="3">No blocked IPs</td></tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-  </div><!-- /security -->
-
-  <!-- ════════════════════════════ TAB: AUDIT LOGS -->
-  <div id="tab-logs" class="tab-section">
-
-    <div class="section-label">Audit Trail</div>
-    <div class="panel">
-      <div class="panel-header">
-        <h3>Recent Security Logs (last 50)</h3>
-      </div>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Email</th>
-              <th>Action</th>
-              <th>IP Address</th>
-              <th>Time</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for log in logs %}
-            <tr>
-              <td class="mono" style="font-size:13px; color:rgba(150,175,220,0.7);">{{ log.email }}</td>
-              <td>
-                {% if "FAIL" in log.action or "BLOCK" in log.action or "LOCK" in log.action %}
-                  <span class="badge badge-red">{{ log.action }}</span>
-                {% elif "SUCCESS" in log.action or "REGISTER" in log.action %}
-                  <span class="badge badge-green">{{ log.action }}</span>
-                {% elif "OTP" in log.action %}
-                  <span class="badge badge-amber">{{ log.action }}</span>
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-head-title">Existing Employers ({{ total_employers }})</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Company</th>
+                  <th>Created By</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for u in users if u.role == "employer" %}
+                <tr>
+                  <td style="font-weight:500; color:var(--text);">{{ u.name }}</td>
+                  <td class="mono" style="color:var(--text-3);">{{ u.email }}</td>
+                  <td>{{ u.company or "—" }}</td>
+                  <td style="color:var(--text-4); font-size:12px;">{{ u.created_by or "—" }}</td>
+                  <td>
+                    <a href="/admin/delete_user/{{ u._id }}"
+                       class="btn btn-red"
+                       onclick="return confirm('Delete employer {{ u.email }}? This cannot be undone.')">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                        <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                      Delete
+                    </a>
+                  </td>
+                </tr>
                 {% else %}
-                  <span class="badge badge-blue">{{ log.action }}</span>
-                {% endif %}
-              </td>
-              <td class="mono" style="font-size:13px; color:rgba(150,175,220,0.6);">{{ log.ip }}</td>
-              <td style="color:rgba(150,175,220,0.45); font-size:12.5px;">{{ log.time }}</td>
-            </tr>
-            {% else %}
-            <tr class="empty-row"><td colspan="4">No logs found</td></tr>
-            {% endfor %}
-          </tbody>
-        </table>
+                <tr class="empty-row"><td colspan="5">No employers yet</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
-    </div>
 
-  </div><!-- /logs -->
+      <!-- ══════════════ TAB: JOBS -->
+      <div id="tab-jobs" class="tab-section">
+        <div class="page-header">
+          <div class="page-title">Job Listings</div>
+          <div class="page-sub">Post new jobs on behalf of employers and manage all listings.</div>
+        </div>
 
-</div><!-- /page -->
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-head-title">Post a New Job</span>
+          </div>
+          <div class="panel-body">
+            <form method="POST" action="/add_job">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <div class="form-grid">
+                <div class="form-field">
+                  <label class="form-label">Job Title</label>
+                  <input type="text" name="title" placeholder="Software Engineer" required maxlength="200">
+                </div>
+                <div class="form-field">
+                  <label class="form-label">Company</label>
+                  <input type="text" name="company" placeholder="Acme Corp" maxlength="200">
+                </div>
+                <div class="form-field">
+                  <label class="form-label">Salary</label>
+                  <input type="text" name="salary" placeholder="₹8–12 LPA" maxlength="50">
+                </div>
+                <div class="form-field" style="grid-column:1/-1;">
+                  <label class="form-label">Description</label>
+                  <textarea name="description" placeholder="Role description, requirements, perks…" maxlength="2000"></textarea>
+                </div>
+              </div>
+              <button type="submit" class="btn btn-primary">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="10" stroke="white" stroke-width="1.8"/>
+                  <path d="M12 8v8M8 12h8" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+                </svg>
+                Post Job
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-head-title">All Listings ({{ jobs|length }})</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Title</th>
+                  <th>Company</th>
+                  <th>Salary</th>
+                  <th>Posted By</th>
+                  <th>Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for job in jobs %}
+                <tr>
+                  <td style="font-weight:600; color:var(--text);">{{ job.title }}</td>
+                  <td>{{ job.company }}</td>
+                  <td style="color:var(--green); font-weight:500;">{{ job.salary or "—" }}</td>
+                  <td class="mono" style="color:var(--text-4);">{{ job.employer_email }}</td>
+                  <td style="max-width:260px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--text-3);" title="{{ job.description }}">{{ job.description or "—" }}</td>
+                </tr>
+                {% else %}
+                <tr class="empty-row"><td colspan="5">No jobs posted yet</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════ TAB: APPLICATIONS -->
+      <div id="tab-applications" class="tab-section">
+        <div class="page-header">
+          <div class="page-title">Applications</div>
+          <div class="page-sub">Review all candidate applications and update their status. Candidates are notified by email.</div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-head-title">All Applications ({{ total_apps }})</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Candidate</th>
+                  <th>Job</th>
+                  <th>Company</th>
+                  <th>Resume</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for app in applications %}
+                <tr>
+                  <td>
+                    <div style="font-weight:600; color:var(--text);">{{ app.user_name }}</div>
+                    <div class="mono" style="color:var(--text-4); font-size:11.5px;">{{ app.user_email }}</div>
+                  </td>
+                  <td style="color:var(--text-2);">{{ app.job_title or app.job_id }}</td>
+                  <td style="color:var(--text-3);">{{ app.company or "—" }}</td>
+                  <td style="color:var(--text-4);" class="mono">{{ app.resume }}</td>
+                  <td>
+                    {% if app.status == "Shortlisted" %}
+                      <span class="badge badge-green"><span class="dot"></span>Shortlisted</span>
+                    {% elif app.status == "Rejected" %}
+                      <span class="badge badge-red"><span class="dot"></span>Rejected</span>
+                    {% else %}
+                      <span class="badge badge-amber"><span class="dot"></span>{{ app.status }}</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <div class="btn-row">
+                      <a href="/admin/shortlist/{{ app._id }}" class="btn btn-green">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                          <path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Shortlist
+                      </a>
+                      <a href="/admin/reject/{{ app._id }}" class="btn btn-red">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                          <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                        Reject
+                      </a>
+                    </div>
+                  </td>
+                </tr>
+                {% else %}
+                <tr class="empty-row"><td colspan="6">No applications yet</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════ TAB: SECURITY -->
+      <div id="tab-security" class="tab-section">
+        <div class="page-header">
+          <div class="page-title">Security</div>
+          <div class="page-sub">Monitor suspicious activity, blocked IPs, and access threats.</div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-head-title">Suspicious IP Addresses</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>IP Address</th>
+                  <th>Failed Attempts</th>
+                  <th>Risk Level</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for ip in suspicious_ips %}
+                <tr class="warning-row">
+                  <td class="mono" style="color:var(--amber); font-weight:600;">{{ ip._id }}</td>
+                  <td style="font-weight:600;">{{ ip.count }}</td>
+                  <td><span class="badge badge-red"><span class="dot"></span>High</span></td>
+                  <td><span class="badge badge-amber">Possible Brute Force</span></td>
+                </tr>
+                {% else %}
+                <tr class="empty-row"><td colspan="4">No suspicious IP activity detected</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-head-title">Blocked IP Addresses</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>IP Address</th>
+                  <th>Blocked Until</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for ip in blocked_ips %}
+                <tr>
+                  <td class="mono" style="color:var(--red); font-weight:600;">{{ ip.ip }}</td>
+                  <td style="color:var(--text-3);">
+                    {{ ip.until | int | timestamp_to_str if ip.until else "—" }}
+                  </td>
+                  <td>
+                    <a href="/unblock_ip/{{ ip._id }}" class="btn btn-green">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                        <path d="M8 11V7a4 4 0 018 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                        <rect x="3" y="11" width="18" height="11" rx="2" stroke="currentColor" stroke-width="1.8"/>
+                      </svg>
+                      Unblock
+                    </a>
+                  </td>
+                </tr>
+                {% else %}
+                <tr class="empty-row"><td colspan="3">No blocked IPs</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════ TAB: AUDIT LOGS -->
+      <div id="tab-logs" class="tab-section">
+
+        <div class="page-header">
+          <div class="page-title">Audit Logs</div>
+          <div class="page-sub">Visual breakdown of the last 50 security events. Export for the full log history.</div>
+        </div>
+
+        <!-- ── Visualization: Summary KPI cards ── -->
+        <div class="section-label">Event Summary</div>
+        <div class="log-viz-grid">
+          <div class="log-stat-card">
+            <div class="log-stat-icon red">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <path d="M12 9v4M12 17h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="currentColor" stroke-width="1.7"/>
+              </svg>
+            </div>
+            <div class="log-stat-body">
+              <div class="log-stat-value" id="kpi-fail">—</div>
+              <div class="log-stat-label">Failure Events</div>
+            </div>
+          </div>
+          <div class="log-stat-card">
+            <div class="log-stat-icon green">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.7"/>
+              </svg>
+            </div>
+            <div class="log-stat-body">
+              <div class="log-stat-value" id="kpi-success">—</div>
+              <div class="log-stat-label">Success Events</div>
+            </div>
+          </div>
+          <div class="log-stat-card">
+            <div class="log-stat-icon amber">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <path d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.35C16.5 22.15 20 17.25 20 12V6L12 2z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <div class="log-stat-body">
+              <div class="log-stat-value" id="kpi-other">—</div>
+              <div class="log-stat-label">Other Events</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Visualization: Charts row ── -->
+        <div class="section-label">Visual Analytics</div>
+        <div class="log-chart-grid">
+
+          <!-- Hourly heatmap -->
+          <div class="log-chart-box">
+            <div class="log-chart-header">
+              <div class="log-chart-title">Event Frequency by Hour</div>
+              <div class="log-legend">
+                <div class="log-legend-item"><div class="log-legend-dot" style="background:#EDB8B8;"></div>Low</div>
+                <div class="log-legend-item"><div class="log-legend-dot" style="background:#D97878;"></div>Med</div>
+                <div class="log-legend-item"><div class="log-legend-dot" style="background:#B83232;"></div>High</div>
+              </div>
+            </div>
+            <div class="heatmap-labels" id="heatmap-hour-labels"></div>
+            <div class="log-heatmap-grid" id="heatmap-cells"></div>
+          </div>
+
+          <!-- Event type donut -->
+          <div class="log-chart-box">
+            <div class="log-chart-header">
+              <div class="log-chart-title">Event Types</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:12px;" id="donut-legend"></div>
+            <div class="log-donut-wrap">
+              <canvas id="logDonutChart" role="img" aria-label="Donut chart showing distribution of audit log event types">Breakdown of audit log events by type.</canvas>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ── Visualization: Event timeline bar chart ── -->
+        <div class="log-chart-box" style="margin-bottom:16px;">
+          <div class="log-chart-header">
+            <div class="log-chart-title">Event Timeline (last 50 events)</div>
+            <!-- Filter tabs -->
+            <div class="log-filter-tabs" id="log-filter-tabs">
+              <button class="log-filter-tab active" data-filter="all">All</button>
+              <button class="log-filter-tab" data-filter="fail">Failures</button>
+              <button class="log-filter-tab" data-filter="success">Successes</button>
+              <button class="log-filter-tab" data-filter="otp">OTP</button>
+            </div>
+          </div>
+          <div class="log-timeline-wrap">
+            <canvas id="logTimelineChart" role="img" aria-label="Stacked bar chart showing event counts over time in the audit log">Timeline of audit log events by type and time.</canvas>
+          </div>
+        </div>
+
+        <!-- ── Live Event Stream ── -->
+        <div class="panel" style="margin-bottom:16px;">
+          <div class="panel-head">
+            <span class="panel-head-title">Live Event Stream</span>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div class="status-dot" style="background:var(--green);"></div>
+              <span style="font-size:11px;color:var(--text-4);font-weight:500;">Showing latest events</span>
+            </div>
+          </div>
+          <div style="padding:4px 20px 8px;" id="log-stream-list">
+            <!-- Populated by JS from the logs data -->
+          </div>
+        </div>
+
+        <!-- ── Full Log Table ── -->
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-head-title">Recent Events</span>
+            <a href="/admin/export_logs" class="btn btn-ghost">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                <path d="M12 4v12M8 12l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M4 20h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              </svg>
+              Export CSV
+            </a>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Email / User</th>
+                  <th>Action</th>
+                  <th>IP Address</th>
+                  <th>Time</th>
+                </tr>
+              </thead>
+              <tbody id="log-table-body">
+                {% for log in logs %}
+                <tr
+                  data-action="{{ log.action }}"
+                  data-email="{{ log.email or log.user or '' }}"
+                  data-ip="{{ log.ip }}"
+                  data-time="{{ log.time }}">
+                  <td class="mono" style="color:var(--text-3);">{{ log.email or log.user or "—" }}</td>
+                  <td>
+                    {% if "FAIL" in log.action or "BLOCK" in log.action or "LOCK" in log.action %}
+                      <span class="badge badge-red">{{ log.action }}</span>
+                    {% elif "SUCCESS" in log.action or "REGISTER" in log.action %}
+                      <span class="badge badge-green">{{ log.action }}</span>
+                    {% elif "OTP" in log.action %}
+                      <span class="badge badge-amber">{{ log.action }}</span>
+                    {% else %}
+                      <span class="badge badge-blue">{{ log.action }}</span>
+                    {% endif %}
+                  </td>
+                  <td class="mono" style="color:var(--text-3);">{{ log.ip }}</td>
+                  <td style="color:var(--text-4); font-size:12.5px;">{{ log.time }}</td>
+                </tr>
+                {% else %}
+                <tr class="empty-row"><td colspan="4">No log entries found</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div><!-- /tab-logs -->
+
+    </div><!-- /page -->
+  </div><!-- /main -->
+</div><!-- /shell -->
 
 <!-- ══════════════════════════════════════════ SCRIPTS -->
 <script nonce="{{ g.csp_nonce }}">
-/* ── Tab switching — runs after DOM is ready ── */
 document.addEventListener('DOMContentLoaded', function () {
 
+  var tabTitles = {
+    overview:     'Overview',
+    users:        'Users',
+    employers:    'Employers',
+    jobs:         'Jobs',
+    applications: 'Applications',
+    security:     'Security',
+    logs:         'Audit Logs'
+  };
+
   function switchTab(name) {
-    document.querySelectorAll('.tab-section').forEach(function(s) {
-      s.classList.remove('active');
-    });
-    document.querySelectorAll('.tab-btn').forEach(function(b) {
-      b.classList.remove('active');
-    });
+    document.querySelectorAll('.tab-section').forEach(function(s) { s.classList.remove('active'); });
+    document.querySelectorAll('.nav-item[data-tab]').forEach(function(b) { b.classList.remove('active'); });
     var section = document.getElementById('tab-' + name);
-    var btn = document.querySelector('.tab-btn[data-tab="' + name + '"]');
+    var btn = document.querySelector('.nav-item[data-tab="' + name + '"]');
     if (section) section.classList.add('active');
-    if (btn) btn.classList.add('active');
+    if (btn)     btn.classList.add('active');
+    var title = document.getElementById('topbar-title');
+    if (title && tabTitles[name]) title.textContent = tabTitles[name];
+    history.replaceState(null, '', '#' + name);
+    if (name === 'logs') { initLogCharts(); }
   }
 
-  /* Attach click listeners to every tab button */
-  document.querySelectorAll('.tab-btn[data-tab]').forEach(function(btn) {
+  document.querySelectorAll('.nav-item[data-tab]').forEach(function(btn) {
     btn.addEventListener('click', function() {
       switchTab(btn.getAttribute('data-tab'));
     });
   });
 
-  /* Auto-open tab from URL hash, e.g. /admin#jobs */
   var hash = location.hash.replace('#', '');
   if (hash && document.getElementById('tab-' + hash)) {
     switchTab(hash);
@@ -829,10 +1552,10 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 /* ── Chart.js defaults ── */
-Chart.defaults.color = 'rgba(150,175,220,0.55)';
-Chart.defaults.borderColor = 'rgba(55,138,221,0.1)';
-Chart.defaults.font.family = "'DM Sans', sans-serif";
-Chart.defaults.font.size = 12;
+Chart.defaults.color          = '#A09890';
+Chart.defaults.borderColor    = '#E8E3DC';
+Chart.defaults.font.family    = "'Instrument Sans', sans-serif";
+Chart.defaults.font.size      = 12;
 
 /* ── Application status bar chart ── */
 new Chart(document.getElementById('appChart'), {
@@ -842,17 +1565,19 @@ new Chart(document.getElementById('appChart'), {
     datasets: [{
       label: 'Applications',
       data: [{{ applied }}, {{ shortlisted }}, {{ rejected }}],
-      backgroundColor: ['rgba(55,138,221,0.25)', 'rgba(29,158,117,0.25)', 'rgba(226,75,74,0.25)'],
-      borderColor:     ['rgba(55,138,221,0.7)',   'rgba(29,158,117,0.7)',  'rgba(226,75,74,0.7)'],
-      borderWidth: 1, borderRadius: 6,
+      backgroundColor: ['#EEF4FB', '#EDF7F2', '#FDF0F0'],
+      borderColor:     ['#2563A8', '#1D7A56', '#B83232'],
+      borderWidth: 1.5,
+      borderRadius: 6,
     }]
   },
   options: {
-    responsive: true, maintainAspectRatio: false,
+    responsive: true,
+    maintainAspectRatio: false,
     plugins: { legend: { display: false } },
     scales: {
-      x: { grid: { color: 'rgba(55,138,221,0.07)' } },
-      y: { grid: { color: 'rgba(55,138,221,0.07)' }, beginAtZero: true }
+      x: { grid: { color: '#F0EBE4' } },
+      y: { grid: { color: '#F0EBE4' }, beginAtZero: true, ticks: { precision: 0 } }
     }
   }
 });
@@ -864,21 +1589,318 @@ new Chart(document.getElementById('threatChart'), {
     labels: ['Failed Logins', 'OTP Failures', 'Blocked Files', 'Locked Accounts'],
     datasets: [{
       data: [{{ failed_logins }}, {{ otp_failures }}, {{ blocked_files }}, {{ locked_accounts }}],
-      backgroundColor: [
-        'rgba(226,75,74,0.7)', 'rgba(239,159,39,0.7)',
-        'rgba(127,119,221,0.7)', 'rgba(55,138,221,0.7)'
-      ],
-      borderColor: '#04102a', borderWidth: 3, hoverOffset: 6
+      backgroundColor: ['#FDF0F0', '#FEF6EC', '#EDF7F2', '#EEF4FB'],
+      borderColor:     ['#B83232', '#A05C1A', '#1D7A56', '#2563A8'],
+      borderWidth: 1.5,
+      hoverOffset: 5
     }]
   },
   options: {
-    responsive: true, maintainAspectRatio: false,
+    responsive: true,
+    maintainAspectRatio: false,
     plugins: {
-      legend: { position:'bottom', labels:{ padding:18, usePointStyle:true, pointStyleWidth:8 } }
+      legend: {
+        position: 'bottom',
+        labels: { padding: 16, usePointStyle: true, pointStyleWidth: 7 }
+      }
     },
-    cutout: '62%'
+    cutout: '60%'
   }
 });
+
+/* ══════════════════════════════
+   AUDIT LOG VISUALIZATION
+════════════════════════════════ */
+var logChartsInited = false;
+
+function initLogCharts() {
+  if (logChartsInited) return;
+  logChartsInited = true;
+
+  /* ── Parse log data from DOM table rows ── */
+  var rows = document.querySelectorAll('#log-table-body tr[data-action]');
+  var logData = [];
+  rows.forEach(function(row) {
+    logData.push({
+      action: row.getAttribute('data-action') || '',
+      email:  row.getAttribute('data-email')  || '—',
+      ip:     row.getAttribute('data-ip')      || '—',
+      time:   row.getAttribute('data-time')    || ''
+    });
+  });
+
+  /* ── Classify each event ── */
+  function classify(action) {
+    var a = action.toUpperCase();
+    if (a.indexOf('FAIL') !== -1 || a.indexOf('BLOCK') !== -1 || a.indexOf('LOCK') !== -1) return 'fail';
+    if (a.indexOf('SUCCESS') !== -1 || a.indexOf('REGISTER') !== -1) return 'success';
+    if (a.indexOf('OTP') !== -1) return 'otp';
+    return 'other';
+  }
+
+  /* ── Count by category ── */
+  var counts = { fail: 0, success: 0, otp: 0, other: 0 };
+  logData.forEach(function(d) { counts[classify(d.action)]++; });
+
+  /* ── KPI cards ── */
+  document.getElementById('kpi-fail').textContent    = counts.fail;
+  document.getElementById('kpi-success').textContent = counts.success;
+  document.getElementById('kpi-other').textContent   = counts.otp + counts.other;
+
+  /* ══ 1. HOURLY HEATMAP ══ */
+  var hourCounts = new Array(24).fill(0);
+  logData.forEach(function(d) {
+    if (!d.time) return;
+    // Try to extract hour from common time formats: "HH:MM" or "YYYY-MM-DD HH:MM:SS"
+    var parts = d.time.split(' ');
+    var timePart = parts.length > 1 ? parts[parts.length - 1] : parts[0];
+    var hour = parseInt(timePart.split(':')[0], 10);
+    if (!isNaN(hour) && hour >= 0 && hour < 24) hourCounts[hour]++;
+  });
+
+  var maxHour = Math.max.apply(null, hourCounts) || 1;
+
+  function heatColor(count, max) {
+    if (count === 0) return '#F5F3EE';
+    var ratio = count / max;
+    if (ratio < 0.33) return '#EDB8B8';
+    if (ratio < 0.66) return '#D97878';
+    return '#B83232';
+  }
+
+  // Labels row
+  var labelContainer = document.getElementById('heatmap-hour-labels');
+  for (var h = 0; h < 24; h++) {
+    var lbl = document.createElement('div');
+    lbl.className = 'heatmap-label';
+    lbl.textContent = (h % 6 === 0) ? h + 'h' : '';
+    labelContainer.appendChild(lbl);
+  }
+
+  // Heatmap cells
+  var heatContainer = document.getElementById('heatmap-cells');
+  for (var h2 = 0; h2 < 24; h2++) {
+    (function(hour, cnt) {
+      var cell = document.createElement('div');
+      cell.className = 'heatmap-cell';
+      cell.style.background = heatColor(cnt, maxHour);
+      cell.title = hour + ':00 — ' + cnt + ' event' + (cnt !== 1 ? 's' : '');
+      heatContainer.appendChild(cell);
+    })(h2, hourCounts[h2]);
+  }
+
+  /* ══ 2. EVENT TYPE DONUT CHART ══ */
+  var donutColors = {
+    fail:    { bg: '#FDF0F0', bd: '#B83232', label: 'Failures' },
+    success: { bg: '#EDF7F2', bd: '#1D7A56', label: 'Successes' },
+    otp:     { bg: '#FEF6EC', bd: '#A05C1A', label: 'OTP Events' },
+    other:   { bg: '#EEF4FB', bd: '#2563A8', label: 'Other' }
+  };
+
+  // Custom legend
+  var legendEl = document.getElementById('donut-legend');
+  ['fail','success','otp','other'].forEach(function(key) {
+    var count = counts[key];
+    var total = logData.length || 1;
+    var pct = Math.round(count / total * 100);
+    var item = document.createElement('div');
+    item.style.cssText = 'display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text-3);font-weight:500;';
+    item.innerHTML = '<div style="width:8px;height:8px;border-radius:2px;background:' + donutColors[key].bd + ';flex-shrink:0;"></div>'
+      + donutColors[key].label + ' ' + pct + '%';
+    legendEl.appendChild(item);
+  });
+
+  new Chart(document.getElementById('logDonutChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Failures', 'Successes', 'OTP Events', 'Other'],
+      datasets: [{
+        data: [counts.fail, counts.success, counts.otp, counts.other],
+        backgroundColor: ['#FDF0F0', '#EDF7F2', '#FEF6EC', '#EEF4FB'],
+        borderColor:     ['#B83232', '#1D7A56', '#A05C1A', '#2563A8'],
+        borderWidth: 1.5,
+        hoverOffset: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false }
+      },
+      cutout: '62%'
+    }
+  });
+
+  /* ══ 3. TIMELINE CHART ══ */
+  // Group logs by a pseudo-time-bucket. We'll bucket into 10 equal-sized groups of events.
+  var bucketSize = Math.max(1, Math.ceil(logData.length / 10));
+  var buckets = [];
+  for (var i = 0; i < logData.length; i += bucketSize) {
+    buckets.push(logData.slice(i, i + bucketSize));
+  }
+
+  function countBucket(bucket, cat) {
+    return bucket.filter(function(d) { return classify(d.action) === cat; }).length;
+  }
+
+  var bucketLabels = buckets.map(function(_, idx) {
+    var start = idx * bucketSize + 1;
+    var end   = Math.min((idx + 1) * bucketSize, logData.length);
+    return 'Events ' + start + '–' + end;
+  });
+
+  var timelineChart = new Chart(document.getElementById('logTimelineChart'), {
+    type: 'bar',
+    data: {
+      labels: bucketLabels,
+      datasets: [
+        {
+          label: 'Failures',
+          data: buckets.map(function(b) { return countBucket(b, 'fail'); }),
+          backgroundColor: '#FDF0F0',
+          borderColor: '#B83232',
+          borderWidth: 1.5,
+          borderRadius: 4,
+        },
+        {
+          label: 'Successes',
+          data: buckets.map(function(b) { return countBucket(b, 'success'); }),
+          backgroundColor: '#EDF7F2',
+          borderColor: '#1D7A56',
+          borderWidth: 1.5,
+          borderRadius: 4,
+        },
+        {
+          label: 'OTP',
+          data: buckets.map(function(b) { return countBucket(b, 'otp'); }),
+          backgroundColor: '#FEF6EC',
+          borderColor: '#A05C1A',
+          borderWidth: 1.5,
+          borderRadius: 4,
+        },
+        {
+          label: 'Other',
+          data: buckets.map(function(b) { return countBucket(b, 'other'); }),
+          backgroundColor: '#EEF4FB',
+          borderColor: '#2563A8',
+          borderWidth: 1.5,
+          borderRadius: 4,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: {
+            padding: 14,
+            usePointStyle: true,
+            pointStyleWidth: 7,
+            font: { size: 11 }
+          }
+        },
+        tooltip: {
+          callbacks: {
+            title: function(items) { return items[0].label; }
+          }
+        }
+      },
+      scales: {
+        x: {
+          stacked: true,
+          grid: { color: '#F0EBE4' },
+          ticks: { font: { size: 10 }, maxRotation: 30 }
+        },
+        y: {
+          stacked: true,
+          grid: { color: '#F0EBE4' },
+          beginAtZero: true,
+          ticks: { precision: 0, font: { size: 11 } }
+        }
+      }
+    }
+  });
+
+  /* ── Filter tabs ── */
+  document.querySelectorAll('.log-filter-tab').forEach(function(tab) {
+    tab.addEventListener('click', function() {
+      document.querySelectorAll('.log-filter-tab').forEach(function(t) { t.classList.remove('active'); });
+      tab.classList.add('active');
+
+      var filter = tab.getAttribute('data-filter');
+
+      function visibleBuckets(cat) {
+        return buckets.map(function(b) {
+          if (cat === 'all') return b.length;
+          return countBucket(b, cat);
+        });
+      }
+
+      if (filter === 'all') {
+        timelineChart.data.datasets[0].data = buckets.map(function(b) { return countBucket(b, 'fail'); });
+        timelineChart.data.datasets[1].data = buckets.map(function(b) { return countBucket(b, 'success'); });
+        timelineChart.data.datasets[2].data = buckets.map(function(b) { return countBucket(b, 'otp'); });
+        timelineChart.data.datasets[3].data = buckets.map(function(b) { return countBucket(b, 'other'); });
+        timelineChart.options.scales.x.stacked = true;
+        timelineChart.options.scales.y.stacked = true;
+      } else {
+        var catMap = { fail: 0, success: 1, otp: 2 };
+        timelineChart.data.datasets.forEach(function(ds, idx) {
+          ds.data = buckets.map(function(b) { return 0; });
+        });
+        var idx = catMap[filter] !== undefined ? catMap[filter] : 3;
+        timelineChart.data.datasets[idx].data = buckets.map(function(b) { return countBucket(b, filter === 'otp' ? 'otp' : filter); });
+        timelineChart.options.scales.x.stacked = false;
+        timelineChart.options.scales.y.stacked = false;
+      }
+      timelineChart.update();
+    });
+  });
+
+  /* ══ 4. LIVE EVENT STREAM ══ */
+  var streamEl = document.getElementById('log-stream-list');
+  var recent = logData.slice(0, 12);
+
+  if (recent.length === 0) {
+    streamEl.innerHTML = '<div style="padding:16px 0;text-align:center;color:var(--text-4);font-size:13px;font-style:italic;">No log entries found</div>';
+  } else {
+    recent.forEach(function(d, i) {
+      var cat = classify(d.action);
+      var dotColor = { fail: 'red', success: 'green', otp: 'amber', other: 'blue' }[cat];
+
+      var item = document.createElement('div');
+      item.className = 'log-stream-item';
+      item.style.animationDelay = (i * 0.04) + 's';
+
+      item.innerHTML = '<div class="log-stream-dot ' + dotColor + '"></div>'
+        + '<div class="log-stream-body">'
+        +   '<div class="log-stream-action">' + escHtml(d.action) + '</div>'
+        +   '<div class="log-stream-meta">'
+        +     '<span class="log-stream-email">' + escHtml(d.email) + '</span>'
+        +     '<span style="color:var(--text-4);font-size:10px;">·</span>'
+        +     '<span class="log-stream-ip">' + escHtml(d.ip) + '</span>'
+        +   '</div>'
+        + '</div>'
+        + '<span class="log-stream-time">' + escHtml(d.time) + '</span>';
+
+      streamEl.appendChild(item);
+    });
+  }
+
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g,'&amp;')
+      .replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;');
+  }
+}
+
+/* If page loads directly on #logs hash, init immediately */
+if (location.hash === '#logs') { initLogCharts(); }
 </script>
 </body>
 </html>

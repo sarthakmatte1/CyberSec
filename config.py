@@ -14,3 +14,4 @@ class Config:
     MAIL_PASSWORD = os.getenv("MAIL_PASS")
 
     ADMIN_EMAIL = os.getenv("ADMIN_EMAIL")
+    ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")   # add this for admin login

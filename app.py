@@ -1,10 +1,10 @@
-from flask import Flask, render_template, request, redirect, session, flash, abort, g
+from flask import Flask, render_template, request, redirect, session, flash, abort, g, send_from_directory, Response
 from flask_bcrypt import Bcrypt
 from flask_mail import Mail
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_wtf.csrf import CSRFProtect, CSRFError
-from pymongo import MongoClient
+from pymongo import MongoClient, ASCENDING, DESCENDING
 from bson.objectid import ObjectId
 from werkzeug.utils import secure_filename
 
@@ -15,12 +15,17 @@ from utils.scanner import is_malicious_file
 from utils.alerts import send_admin_alert
 
 import os
-import random
 import time
 import re
+import uuid
 import secrets
+import string
 import datetime
-import magic  # python-magic for MIME type checking
+import hashlib  # ✅ SHA-256: imported for all four SHA-256 use cases
+import json     # ✅ SHA-256: used for log tamper detection serialization
+import magic    # python-magic for MIME type checking
+import csv
+import io
 
 # =====================================================
 # APP SETUP
@@ -38,21 +43,111 @@ if not secret or len(secret) < 32:
 app.secret_key = secret
 
 # ── Session cookie hardening ───────────────────────
-app.config["SESSION_COOKIE_HTTPONLY"] = True    # JS cannot read the cookie
-app.config["SESSION_COOKIE_SECURE"]   = False   # Set True in production (HTTPS)
-app.config["SESSION_COOKIE_SAMESITE"] = "Lax"   # CSRF mitigation
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SECURE"]   = True    # Must be True in production (HTTPS)
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 app.config["PERMANENT_SESSION_LIFETIME"] = 1800  # 30-minute session expiry
 
+# ── File upload config ─────────────────────────────
+app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024  # 5 MB hard cap — prevents DoS
+
 bcrypt = Bcrypt(app)
-csrf   = CSRFProtect(app)   # CSRF protection on all POST forms
+csrf   = CSRFProtect(app)
 mail.init_app(app)
 
+
 # =====================================================
-# CSP NONCE — generated once per request in before_request,
-# consumed in after_request for the Content-Security-Policy header,
-# and available in templates via {{ g.csp_nonce }}.
-# This is what allows inline <script> blocks to run while
-# keeping script-src locked down (no 'unsafe-inline').
+# SHA-256 HELPERS
+# =====================================================
+
+# ── 1. FILE INTEGRITY ─────────────────────────────
+def get_file_hash(filepath):
+    """
+    Compute SHA-256 of a file in 8 KB chunks.
+    Used to verify resume files haven't been tampered
+    with after upload.
+    """
+    sha256 = hashlib.sha256()
+    with open(filepath, "rb") as f:
+        for chunk in iter(lambda: f.read(8192), b""):
+            sha256.update(chunk)
+    return sha256.hexdigest()
+
+
+def verify_file_integrity(filepath, stored_hash):
+    """
+    Re-hash the file on disk and compare to the stored hash.
+    Returns True if intact, False if modified or missing.
+    """
+    if not stored_hash:
+        return True   # Legacy file uploaded before hashing was added
+    try:
+        return get_file_hash(filepath) == stored_hash
+    except FileNotFoundError:
+        return False
+
+
+# ── 2. LOG TAMPER DETECTION ───────────────────────
+def hash_log_entry(entry):
+    """
+    SHA-256 of a log entry's core fields (user, action, ip, timestamp).
+    Any post-write modification to those fields will be detectable.
+    """
+    hashable = json.dumps({
+        "user":      entry.get("user", ""),
+        "action":    entry.get("action", ""),
+        "ip":        entry.get("ip", ""),
+        "timestamp": entry.get("timestamp", ""),
+    }, sort_keys=True)
+    return hashlib.sha256(hashable.encode()).hexdigest()
+
+
+def verify_log_integrity(log_entry):
+    """
+    Re-compute expected hash for a log entry and compare.
+    Returns True if untampered, False if the entry was modified.
+    """
+    stored_hash = log_entry.get("integrity_hash")
+    if not stored_hash:
+        return True   # Legacy entry before hashing was added
+    return hashlib.sha256(
+        json.dumps({
+            "user":      log_entry.get("user", ""),
+            "action":    log_entry.get("action", ""),
+            "ip":        log_entry.get("ip", ""),
+            "timestamp": log_entry.get("timestamp", ""),
+        }, sort_keys=True).encode()
+    ).hexdigest() == stored_hash
+
+
+# ── 3. OTP HASHING ───────────────────────────────
+def hash_otp(otp: str) -> str:
+    """
+    SHA-256 hash of an OTP for safe session storage.
+    OTPs are short-lived (5 min) and generated via secrets,
+    so SHA-256 is acceptable here — unlike long-lived passwords.
+    """
+    return hashlib.sha256(otp.encode()).hexdigest()
+
+
+# ── 4. SESSION FINGERPRINTING ─────────────────────
+def generate_session_fingerprint(req) -> str:
+    """
+    SHA-256 fingerprint of the client's browser environment.
+    If this changes mid-session, it likely means the session
+    cookie was stolen and replayed from a different machine.
+    IP is intentionally excluded — mobile users roam networks.
+    """
+    data = "|".join([
+        req.user_agent.string or "",
+        str(req.accept_languages),
+        str(req.accept_encodings),
+    ])
+    return hashlib.sha256(data.encode()).hexdigest()
+
+
+# =====================================================
+# CSP NONCE — generated once per request
 # =====================================================
 @app.before_request
 def set_csp_nonce():
@@ -60,8 +155,80 @@ def set_csp_nonce():
 
 
 # =====================================================
+# ENFORCE FIRST-LOGIN PASSWORD CHANGE
+# =====================================================
+@app.before_request
+def enforce_password_change():
+    """
+    If an authenticated user has must_change_pass=True, redirect every
+    request to /change_password until they comply.
+    """
+    if not request.endpoint:
+        return
+    exempt = {"change_password", "logout", "csp_report", "static"}
+    if request.endpoint in exempt:
+        return
+    if "user" in session:
+        user_doc = db.users.find_one(
+            {"email": session["user"]},
+            {"must_change_pass": 1}
+        )
+        if user_doc and user_doc.get("must_change_pass"):
+            flash("You must change your password before continuing.")
+            return redirect("/change_password")
+
+
+# =====================================================
+# ✅ SHA-256 (4): SESSION FINGERPRINT CHECK
+# Detects session hijacking on every authenticated request.
+# =====================================================
+@app.before_request
+def check_session_fingerprint():
+    """
+    Re-compute the browser fingerprint on every authenticated request
+    and compare to what was stored at login time.
+    Mismatch → kill the session immediately and alert admin.
+    """
+    # Guard: endpoint can be None for unmatched routes
+    if not request.endpoint:
+        return
+
+    exempt = {
+        "login", "logout", "register", "static",
+        "forgot_password", "reset_password", "csp_report",
+        "verify_otp", "index",
+    }
+    if request.endpoint in exempt:
+        return
+
+    # Only check authenticated sessions that have a stored fingerprint
+    if "user" not in session or "fingerprint" not in session:
+        return
+
+    try:
+        current_fp = generate_session_fingerprint(request)
+        stored_fp  = session.get("fingerprint")
+
+        if stored_fp and current_fp != stored_fp:
+            suspected_email = session.get("user", "unknown")
+            try:
+                add_log(db, suspected_email, "SESSION_HIJACK_DETECTED", request.remote_addr)
+                send_admin_alert(
+                    f"Possible session hijack for {suspected_email} from IP "
+                    f"{request.remote_addr}. Fingerprint mismatch detected."
+                )
+            except Exception:
+                pass  # Don't let logging failure block the security response
+            session.clear()
+            flash("Your session was terminated for security reasons. Please log in again.")
+            return redirect("/login")
+    except Exception:
+        # Never let fingerprint check crash a legitimate request
+        pass
+
+
+# =====================================================
 # JINJA2 FILTER — Unix timestamp → human-readable string
-# Usage in templates:  {{ ip.until | timestamp_to_str }}
 # =====================================================
 @app.template_filter("timestamp_to_str")
 def timestamp_to_str(ts):
@@ -80,6 +247,7 @@ limiter = Limiter(
     default_limits=[]
 )
 
+
 # =====================================================
 # UPLOAD FOLDER
 # =====================================================
@@ -91,8 +259,9 @@ ALLOWED_EXTENSIONS = {".pdf", ".doc", ".docx"}
 ALLOWED_MIME_TYPES = {
     "application/pdf",
     "application/msword",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 }
+
 
 # =====================================================
 # DATABASE
@@ -100,11 +269,18 @@ ALLOWED_MIME_TYPES = {
 client = MongoClient(app.config["MONGO_URI"])
 db = client["recruitment_db"]
 
+
+def ensure_indexes():
+    db.users.create_index([("email", ASCENDING)], unique=True)
+    db.applications.create_index([("user_email", ASCENDING)])
+    db.applications.create_index([("employer_email", ASCENDING)])
+    db.security_logs.create_index([("ip", ASCENDING)])
+    db.security_logs.create_index([("action", ASCENDING)])
+    db.security_logs.create_index([("timestamp", DESCENDING)])
+
+
 # =====================================================
 # ADMIN SEEDING
-# Reads ADMIN_EMAIL + ADMIN_PASSWORD from env/.config.
-# Creates the admin account once on startup if it doesn't exist.
-# Admin can NEVER be registered via the public /register route.
 # =====================================================
 def seed_admin():
     admin_email    = os.environ.get("ADMIN_EMAIL", "").strip().lower()
@@ -115,7 +291,7 @@ def seed_admin():
         return
 
     if db.users.find_one({"email": admin_email}):
-        return  # Already exists, skip
+        return
 
     if not strong_password(admin_password):
         raise RuntimeError(
@@ -125,14 +301,15 @@ def seed_admin():
 
     hashed = bcrypt.generate_password_hash(admin_password).decode("utf-8")
     db.users.insert_one({
-        "name":            "System Administrator",
-        "email":           admin_email,
-        "password":        hashed,
-        "role":            "admin",
-        "company":         None,
-        "failed_attempts": 0,
-        "locked_until":    0,
-        "created_by":      "seed"
+        "name":             "System Administrator",
+        "email":            admin_email,
+        "password":         hashed,
+        "role":             "admin",
+        "company":          None,
+        "failed_attempts":  0,
+        "locked_until":     0,
+        "created_by":       "seed",
+        "must_change_pass": False,
     })
     print(f"[INFO] Admin account seeded for {admin_email}")
 
@@ -171,7 +348,7 @@ def require_role(*roles):
             live_role = get_fresh_role(session["user"])
             if live_role not in roles:
                 abort(403)
-            session["role"] = live_role   # Keep session in sync
+            session["role"] = live_role
             return f(*args, **kwargs)
         return wrapped
     return decorator
@@ -206,7 +383,7 @@ def strong_password(password):
     - At least one uppercase letter
     - At least one lowercase letter
     - At least one digit
-    - At least one special character from the allowed set
+    - At least one special character
     """
     if len(password) < 8:
         return False
@@ -219,6 +396,26 @@ def strong_password(password):
     if not re.search(r"[!@#$%^&*()_+=\-]", password):
         return False
     return True
+
+
+def generate_otp():
+    """
+    Cryptographically secure OTP via secrets module.
+    Always produces exactly 6 digits.
+    """
+    return str(secrets.randbelow(900000) + 100000)
+
+
+def regenerate_session(keep_keys=None):
+    """
+    Proper session fixation prevention.
+    Clears the current session and re-populates only the keys we
+    explicitly carry forward, forcing a new session ID.
+    """
+    keep_keys = keep_keys or []
+    kept = {k: session[k] for k in keep_keys if k in session}
+    session.clear()
+    session.update(kept)
 
 
 # =====================================================
@@ -242,9 +439,24 @@ def add_security_headers(response):
         f"img-src 'self' data:; "
         f"object-src 'none'; "
         f"base-uri 'self'; "
-        f"form-action 'self';"
+        f"form-action 'self'; "
+        f"report-uri /csp-report;"
     )
     return response
+
+
+# =====================================================
+# CSP VIOLATION REPORT ENDPOINT
+# =====================================================
+@app.route("/csp-report", methods=["POST"])
+@csrf.exempt
+def csp_report():
+    try:
+        raw = request.data[:1000].decode("utf-8", errors="replace")
+        add_log(db, "system", f"CSP_VIOLATION:{raw}", request.remote_addr)
+    except Exception:
+        pass
+    return "", 204
 
 
 # =====================================================
@@ -257,6 +469,15 @@ def handle_csrf_error(e):
 
 
 # =====================================================
+# FILE TOO LARGE ERROR HANDLER
+# =====================================================
+@app.errorhandler(413)
+def file_too_large(e):
+    flash("File too large. Maximum allowed size is 5 MB.")
+    return redirect(request.referrer or "/jobs"), 413
+
+
+# =====================================================
 # HOME
 # =====================================================
 @app.route("/")
@@ -265,19 +486,16 @@ def index():
 
 
 # =====================================================
-# REGISTER  (candidates only — no role selection)
-# Admin is seeded from env. Employers are created by admin.
-# Attempting to POST role=admin or role=employer is blocked server-side.
+# REGISTER (candidates only)
 # =====================================================
 @app.route("/register", methods=["GET", "POST"])
+@limiter.limit("5 per hour")
 def register():
     if request.method == "POST":
         name     = sanitize_string(request.form.get("name", ""), 100)
         email    = sanitize_string(request.form.get("email", ""), 254).lower()
         password = request.form.get("password", "").strip()
 
-        # Hard-coded role — registration is candidates ONLY.
-        # Any attempt to inject a different role via form tampering is ignored.
         role = "candidate"
 
         if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
@@ -295,14 +513,15 @@ def register():
         hashed = bcrypt.generate_password_hash(password).decode("utf-8")
 
         db.users.insert_one({
-            "name":            name,
-            "email":           email,
-            "password":        hashed,
-            "role":            role,
-            "company":         None,
-            "failed_attempts": 0,
-            "locked_until":    0,
-            "created_by":      "self"
+            "name":             name,
+            "email":            email,
+            "password":         hashed,
+            "role":             role,
+            "company":          None,
+            "failed_attempts":  0,
+            "locked_until":     0,
+            "created_by":       "self",
+            "must_change_pass": False,
         })
 
         add_log(db, email, "REGISTER_SUCCESS", request.remote_addr)
@@ -318,6 +537,7 @@ def register():
 @app.route("/login", methods=["GET", "POST"])
 @limiter.limit("5 per minute")
 def login():
+    import random
     ip = request.remote_addr
 
     # IP block check
@@ -366,18 +586,27 @@ def login():
         flash(f"Account locked. Try again in {remaining} minute(s).")
         return redirect("/login")
 
-    if bcrypt.check_password_hash(user["password"], password):
+    try:
+        password_match = bcrypt.check_password_hash(user["password"], password)
+    except ValueError as e:
+        print(f"Invalid password hash for user {email}: {e}")
+        add_log(db, email, "LOGIN_FAILED", ip)
+        flash("Invalid credentials")
+        return redirect("/login")
+
+    if password_match:
         db.users.update_one({"email": email}, {"$set": {"failed_attempts": 0}})
 
-        otp = str(random.randint(100000, 999999))
+        otp = generate_otp()
 
-        session["otp"]          = otp
+        # ✅ SHA-256 (3): Store OTP hash in session, never plaintext
+        session["otp"]          = hash_otp(otp)
         session["otp_expiry"]   = time.time() + 300
         session["otp_attempts"] = 0
         session["temp_user"]    = user["email"]
         session["temp_name"]    = user["name"]
         session["temp_role"]    = user["role"]
-        session["temp_company"] = user.get("company")   # None for candidates
+        session["temp_company"] = user.get("company")
 
         send_email(app, email, "OTP Verification",
                    f"Your OTP is {otp}. It expires in 5 minutes. Do not share it.")
@@ -391,6 +620,9 @@ def login():
     if attempts >= 5:
         update_data["locked_until"] = time.time() + 300
         add_log(db, email, "ACCOUNT_LOCKED", ip)
+        send_admin_alert(
+            f"Account locked for {email} after {attempts} failed attempts from IP {ip}."
+        )
 
     db.users.update_one({"email": email}, {"$set": update_data})
     add_log(db, email, "LOGIN_FAILED", ip)
@@ -431,29 +663,36 @@ def verify_otp():
 
         if attempts > max_attempts:
             add_log(db, session.get("temp_user", "unknown"), "OTP_BRUTE_FORCE", request.remote_addr)
+            send_admin_alert(
+                f"OTP brute force detected for {session.get('temp_user', 'unknown')} "
+                f"from IP {request.remote_addr}."
+            )
             session.clear()
             flash("Too many wrong OTP attempts. Please log in again.")
             return redirect("/login")
 
-        if otp == session.get("otp"):
-            session["user"]    = session["temp_user"]
-            session["name"]    = session["temp_name"]
-            session["role"]    = session["temp_role"]
-            session["company"] = session["temp_company"]
+        # ✅ SHA-256 (3): Compare hash of user input against stored OTP hash
+        if hash_otp(otp) == session.get("otp"):
+            user_email   = session["temp_user"]
+            user_name    = session["temp_name"]
+            user_role    = session["temp_role"]
+            user_company = session["temp_company"]
 
-            add_log(db, session["user"], "LOGIN_SUCCESS", request.remote_addr)
+            # Full session regeneration to prevent session fixation
+            regenerate_session()
 
-            for key in ("otp", "otp_expiry", "otp_attempts",
-                        "temp_user", "temp_name", "temp_role", "temp_company"):
-                session.pop(key, None)
+            session["user"]        = user_email
+            session["name"]        = user_name
+            session["role"]        = user_role
+            session["company"]     = user_company
+            # ✅ SHA-256 (4): Store browser fingerprint after successful login
+            session["fingerprint"] = generate_session_fingerprint(request)
 
-            session.modified = True   # Trigger session ID regeneration
+            add_log(db, user_email, "LOGIN_SUCCESS", request.remote_addr)
 
-            # Route to correct dashboard based on role
-            role = session["role"]
-            if role == "admin":
+            if user_role == "admin":
                 return redirect("/admin")
-            elif role == "employer":
+            elif user_role == "employer":
                 return redirect("/employer")
             else:
                 return redirect("/dashboard")
@@ -475,15 +714,16 @@ def forgot_password():
         email = sanitize_string(request.form.get("email", ""), 254).lower()
         user  = db.users.find_one({"email": email})
 
-        # Same message regardless — prevents user enumeration
         if not user:
+            time.sleep(0.5)   # Timing equalization — prevents user enumeration
             flash("If that email exists, an OTP has been sent.")
             return redirect("/forgot_password")
 
-        otp = str(random.randint(100000, 999999))
+        otp = generate_otp()
 
         session["reset_email"]    = email
-        session["reset_otp"]      = otp
+        # ✅ SHA-256 (3): Store reset OTP hash in session, never plaintext
+        session["reset_otp"]      = hash_otp(otp)
         session["reset_expiry"]   = time.time() + 300
         session["reset_attempts"] = 0
 
@@ -501,6 +741,7 @@ def forgot_password():
 # RESET PASSWORD
 # =====================================================
 @app.route("/reset_password", methods=["GET", "POST"])
+@limiter.limit("5 per minute")
 def reset_password():
     if request.method == "POST":
         otp      = sanitize_string(request.form.get("otp", ""), 10)
@@ -519,7 +760,8 @@ def reset_password():
             flash("Too many wrong attempts. Please request a new OTP.")
             return redirect("/forgot_password")
 
-        if otp != session.get("reset_otp"):
+        # ✅ SHA-256 (3): Compare hash of input against stored reset OTP hash
+        if hash_otp(otp) != session.get("reset_otp"):
             flash("Wrong OTP")
             return redirect("/reset_password")
 
@@ -546,6 +788,113 @@ def reset_password():
 
 
 # =====================================================
+# CHANGE PASSWORD
+# =====================================================
+@app.route("/change_password", methods=["GET", "POST"])
+def change_password():
+    if "user" not in session:
+        return redirect("/login")
+
+    if request.method == "POST":
+        current  = request.form.get("current_password", "").strip()
+        new_pass = request.form.get("new_password", "").strip()
+
+        user_doc = get_fresh_user(session["user"])
+
+        if not bcrypt.check_password_hash(user_doc["password"], current):
+            flash("Current password is incorrect.")
+            return redirect("/change_password")
+
+        if not strong_password(new_pass):
+            flash("Weak Password: needs 8+ chars, uppercase, lowercase, number, special char")
+            return redirect("/change_password")
+
+        if current == new_pass:
+            flash("New password must be different from your current password.")
+            return redirect("/change_password")
+
+        hashed = bcrypt.generate_password_hash(new_pass).decode("utf-8")
+        db.users.update_one(
+            {"email": session["user"]},
+            {"$set": {"password": hashed, "must_change_pass": False}}
+        )
+
+        add_log(db, session["user"], "PASSWORD_CHANGED", request.remote_addr)
+        flash("Password changed successfully.")
+
+        role = session.get("role")
+        if role == "admin":
+            return redirect("/admin")
+        elif role == "employer":
+            return redirect("/employer")
+        return redirect("/dashboard")
+
+    return render_template("change_password.html")
+
+
+# =====================================================
+# SERVE RESUME — authenticated, role-gated
+# ✅ SHA-256 (1): Integrity verified before serving file
+# =====================================================
+@app.route("/resume/<filename>")
+def serve_resume(filename):
+    if "user" not in session:
+        abort(403)
+
+    filename = secure_filename(filename)
+    if not filename:
+        abort(400)
+
+    role = session.get("role")
+
+    if role in ("admin", "employer"):
+        if role == "employer":
+            app_doc = db.applications.find_one({
+                "employer_email": session["user"],
+                "resume": filename
+            })
+            if not app_doc:
+                abort(403)
+        else:
+            app_doc = db.applications.find_one({"resume": filename})
+
+        # ✅ SHA-256 (1): Verify file integrity before serving
+        if app_doc:
+            filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+            if not verify_file_integrity(filepath, app_doc.get("resume_sha256")):
+                add_log(db, session["user"], f"FILE_INTEGRITY_FAIL:{filename}", request.remote_addr)
+                send_admin_alert(
+                    f"Resume integrity check FAILED for {filename}. "
+                    f"File may have been tampered with."
+                )
+                abort(500)
+
+        return send_from_directory(app.config["UPLOAD_FOLDER"], filename)
+
+    if role == "candidate":
+        app_doc = db.applications.find_one({
+            "user_email": session["user"],
+            "resume": filename
+        })
+        if not app_doc:
+            abort(403)
+
+        # ✅ SHA-256 (1): Verify file integrity before serving
+        filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+        if not verify_file_integrity(filepath, app_doc.get("resume_sha256")):
+            add_log(db, session["user"], f"FILE_INTEGRITY_FAIL:{filename}", request.remote_addr)
+            send_admin_alert(
+                f"Resume integrity check FAILED for {filename}. "
+                f"File may have been tampered with."
+            )
+            abort(500)
+
+        return send_from_directory(app.config["UPLOAD_FOLDER"], filename)
+
+    abort(403)
+
+
+# =====================================================
 # CANDIDATE DASHBOARD
 # =====================================================
 @app.route("/dashboard")
@@ -553,7 +902,6 @@ def reset_password():
 def dashboard():
     applications = list(db.applications.find({"user_email": session["user"]}))
 
-    # Enrich each application with job title
     for app_doc in applications:
         try:
             job = db.jobs.find_one({"_id": ObjectId(app_doc["job_id"])})
@@ -567,12 +915,12 @@ def dashboard():
         "dashboard.html",
         name=session["name"],
         role=session["role"],
-        applications=applications
+        applications=applications,
     )
 
 
 # =====================================================
-# JOBS  (candidates browse & apply; employers/admin see their own)
+# JOBS
 # =====================================================
 @app.route("/jobs")
 def jobs():
@@ -584,17 +932,15 @@ def jobs():
     if role == "candidate":
         jobs_list = list(db.jobs.find())
     elif role == "employer":
-        # Employers only see jobs they own
         jobs_list = list(db.jobs.find({"employer_email": session["user"]}))
     else:
-        # Admin sees all
         jobs_list = list(db.jobs.find())
 
     return render_template("jobs.html", jobs=jobs_list, role=role)
 
 
 # =====================================================
-# ADD JOB  (employer posts under their company; admin can post too)
+# ADD JOB
 # =====================================================
 @app.route("/add_job", methods=["POST"])
 @require_role("admin", "employer")
@@ -607,7 +953,6 @@ def add_job():
         flash("Job title is required")
         return redirect("/employer" if session.get("role") == "employer" else "/admin")
 
-    # Company is always the employer's own company — not user-supplied
     user_doc = get_fresh_user(session["user"])
     company  = user_doc.get("company") or sanitize_string(request.form.get("company", ""), 200)
 
@@ -621,7 +966,7 @@ def add_job():
         "salary":         salary,
         "description":    description,
         "employer_email": session["user"],
-        "posted_at":      time.time()
+        "posted_at":      time.time(),
     })
 
     add_log(db, session["user"], "JOB_ADDED", request.remote_addr)
@@ -630,7 +975,8 @@ def add_job():
 
 
 # =====================================================
-# APPLY FOR JOB  (candidates only)
+# APPLY FOR JOB
+# ✅ SHA-256 (1): Resume hashed on upload and stored in DB
 # =====================================================
 @app.route("/apply/<job_id>", methods=["POST"])
 @require_role("candidate")
@@ -644,7 +990,6 @@ def apply(job_id):
     if not job:
         abort(404)
 
-    # Prevent duplicate applications
     existing = db.applications.find_one({
         "user_email": session["user"],
         "job_id":     str(job_oid)
@@ -658,21 +1003,33 @@ def apply(job_id):
         flash("Please upload a resume")
         return redirect("/jobs")
 
-    filename = secure_filename(file.filename)
+    original_filename = secure_filename(file.filename)
 
     valid, reason = validate_file(file)
     if not valid:
         add_log(db, session["user"], "MALICIOUS_FILE_BLOCKED", request.remote_addr)
+        send_admin_alert(
+            f"Malicious file upload blocked for user {session['user']} "
+            f"from IP {request.remote_addr}. Reason: {reason}"
+        )
         flash(f"File rejected: {reason}")
         return redirect("/jobs")
 
-    if is_malicious_file(filename):
+    if is_malicious_file(original_filename):
         add_log(db, session["user"], "MALICIOUS_FILE_BLOCKED", request.remote_addr)
+        send_admin_alert(
+            f"Dangerous filename blocked for user {session['user']} "
+            f"from IP {request.remote_addr}. Filename: {original_filename}"
+        )
         flash("Dangerous file blocked.")
         return redirect("/jobs")
 
-    filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+    unique_filename = f"{uuid.uuid4().hex}_{original_filename}"
+    filepath = os.path.join(app.config["UPLOAD_FOLDER"], unique_filename)
     file.save(filepath)
+
+    # ✅ SHA-256 (1): Hash the saved resume for integrity verification
+    file_hash = get_file_hash(filepath)
 
     db.applications.insert_one({
         "user_email":     session["user"],
@@ -680,10 +1037,11 @@ def apply(job_id):
         "job_id":         str(job_oid),
         "job_title":      job["title"],
         "company":        job["company"],
-        "employer_email": job["employer_email"],   # Ties application to exact employer
-        "resume":         filename,
+        "employer_email": job["employer_email"],
+        "resume":         unique_filename,
+        "resume_sha256":  file_hash,          # ✅ stored for later integrity checks
         "status":         "Applied",
-        "applied_at":     time.time()
+        "applied_at":     time.time(),
     })
 
     add_log(db, session["user"], "APPLICATION_SUBMITTED", request.remote_addr)
@@ -693,7 +1051,6 @@ def apply(job_id):
 
 # =====================================================
 # EMPLOYER DASHBOARD
-# Shows: employer's company info, their jobs, applications to their jobs only
 # =====================================================
 @app.route("/employer")
 @require_role("employer")
@@ -701,10 +1058,7 @@ def employer_dashboard():
     user_doc = get_fresh_user(session["user"])
     company  = user_doc.get("company", "Unknown Company")
 
-    # Only jobs posted by this employer
-    my_jobs = list(db.jobs.find({"employer_email": session["user"]}))
-
-    # Only applications for this employer's jobs
+    my_jobs         = list(db.jobs.find({"employer_email": session["user"]}))
     my_applications = list(db.applications.find({"employer_email": session["user"]}))
 
     return render_template(
@@ -712,7 +1066,7 @@ def employer_dashboard():
         name=session["name"],
         company=company,
         jobs=my_jobs,
-        applications=my_applications
+        applications=my_applications,
     )
 
 
@@ -727,14 +1081,26 @@ def employer_shortlist(app_id):
     except Exception:
         abort(400)
 
-    # Ownership check — employer can only act on their own applications
     app_doc = db.applications.find_one({"_id": oid})
     if not app_doc or app_doc.get("employer_email") != session["user"]:
         abort(403)
 
     db.applications.update_one({"_id": oid}, {"$set": {"status": "Shortlisted"}})
     add_log(db, session["user"], "APPLICATION_SHORTLISTED", request.remote_addr)
-    flash("Application shortlisted.")
+
+    send_email(
+        app,
+        app_doc["user_email"],
+        "Congratulations! You've Been Shortlisted",
+        f"Dear {app_doc['user_name']},\n\n"
+        f"Great news! You have been shortlisted for the position of "
+        f"'{app_doc['job_title']}' at {app_doc['company']}.\n\n"
+        f"The employer will be in touch with you shortly regarding next steps.\n\n"
+        f"Best of luck!\n"
+        f"Recruitment Portal Team"
+    )
+
+    flash("Application shortlisted and candidate notified by email.")
     return redirect("/employer")
 
 
@@ -755,21 +1121,35 @@ def employer_reject(app_id):
 
     db.applications.update_one({"_id": oid}, {"$set": {"status": "Rejected"}})
     add_log(db, session["user"], "APPLICATION_REJECTED", request.remote_addr)
-    flash("Application rejected.")
+
+    send_email(
+        app,
+        app_doc["user_email"],
+        f"Your Application at {app_doc['company']}",
+        f"Dear {app_doc['user_name']},\n\n"
+        f"Thank you for applying for the position of '{app_doc['job_title']}' "
+        f"at {app_doc['company']}.\n\n"
+        f"After careful consideration, we regret to inform you that we will "
+        f"not be moving forward with your application at this time.\n\n"
+        f"We encourage you to apply for future openings that match your profile.\n\n"
+        f"Best regards,\n"
+        f"Recruitment Portal Team"
+    )
+
+    flash("Application rejected and candidate notified by email.")
     return redirect("/employer")
 
 
 # =====================================================
 # ADMIN PANEL
-# Full oversight: users, all jobs, all applications, security logs
 # =====================================================
 @app.route("/admin")
 @require_role("admin")
 def admin():
-    users        = list(db.users.find({}, {"password": 0}))   # Never expose hashes
+    users        = list(db.users.find({}, {"password": 0}))
     jobs         = list(db.jobs.find())
     applications = list(db.applications.find())
-    logs         = list(db.security_logs.find().sort("_id", -1).limit(50))
+    logs         = list(db.security_logs.find().sort("_id", DESCENDING).limit(50))
 
     total_users      = db.users.count_documents({})
     total_employers  = db.users.count_documents({"role": "employer"})
@@ -788,10 +1168,14 @@ def admin():
         {"$match": {"action": "LOGIN_FAILED"}},
         {"$group": {"_id": "$ip", "count": {"$sum": 1}}},
         {"$match": {"count": {"$gte": 3}}},
-        {"$sort":  {"count": -1}}
+        {"$sort":  {"count": -1}},
     ]
     suspicious_ips = list(db.security_logs.aggregate(pipeline))
     blocked_ips    = list(db.blocked_ips.find())
+
+    # ✅ SHA-256 (2): Flag any tampered log entries for the admin panel
+    for log in logs:
+        log["integrity_ok"] = verify_log_integrity(log)
 
     return render_template(
         "admin.html",
@@ -811,19 +1195,56 @@ def admin():
         applied=applied,
         shortlisted=shortlisted,
         rejected=rejected,
-        suspicious_ips=suspicious_ips
+        suspicious_ips=suspicious_ips,
+    )
+
+
+# =====================================================
+# ADMIN: AUDIT LOG EXPORT
+# ✅ SHA-256 (2): Integrity column added to CSV export
+# =====================================================
+@app.route("/admin/export_logs")
+@require_role("admin")
+def export_logs():
+    logs = list(db.security_logs.find().sort("_id", DESCENDING).limit(1000))
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    # ✅ SHA-256 (2): Added "integrity" column to catch tampered entries
+    writer.writerow(["timestamp", "user", "action", "ip", "integrity"])
+
+    for log in logs:
+        ts = log.get("timestamp", "")
+        if isinstance(ts, (int, float)):
+            ts = datetime.datetime.fromtimestamp(ts).strftime("%Y-%m-%d %H:%M:%S")
+
+        # ✅ SHA-256 (2): Verify each log entry and flag tampered ones
+        integrity = "OK" if verify_log_integrity(log) else "TAMPERED"
+
+        writer.writerow([
+            ts,
+            log.get("user", ""),
+            log.get("action", ""),
+            log.get("ip", ""),
+            integrity,
+        ])
+
+    output.seek(0)
+    add_log(db, session["user"], "AUDIT_LOG_EXPORTED", request.remote_addr)
+
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-Disposition": "attachment; filename=security_audit_log.csv"}
     )
 
 
 # =====================================================
 # ADMIN: CREATE EMPLOYER
-# No public route — only reachable by authenticated admin.
-# Employer receives a temp password via email and must change it on first login.
 # =====================================================
 @app.route("/admin/create_employer", methods=["POST"])
 @require_role("admin")
 def create_employer():
-    import string
     name    = sanitize_string(request.form.get("name", ""), 100)
     email   = sanitize_string(request.form.get("email", ""), 254).lower()
     company = sanitize_string(request.form.get("company", ""), 200)
@@ -840,7 +1261,6 @@ def create_employer():
         flash("An account with that email already exists.")
         return redirect("/admin")
 
-    # Generate a cryptographically random temporary password
     alphabet  = string.ascii_letters + string.digits + "!@#$%^&*"
     temp_pass = (
         secrets.choice(string.ascii_uppercase) +
@@ -849,9 +1269,8 @@ def create_employer():
         secrets.choice("!@#$%^&*") +
         "".join(secrets.choice(alphabet) for _ in range(12))
     )
-    # Shuffle so the guaranteed chars aren't always at the front
     temp_list = list(temp_pass)
-    random.shuffle(temp_list)
+    secrets.SystemRandom().shuffle(temp_list)
     temp_pass = "".join(temp_list)
 
     hashed = bcrypt.generate_password_hash(temp_pass).decode("utf-8")
@@ -865,7 +1284,7 @@ def create_employer():
         "failed_attempts":  0,
         "locked_until":     0,
         "created_by":       session["user"],
-        "must_change_pass": True   # Flag for future enforcement
+        "must_change_pass": True,
     })
 
     send_email(
@@ -876,7 +1295,8 @@ def create_employer():
         f"Company: {company}\n"
         f"Email: {email}\n"
         f"Temporary Password: {temp_pass}\n\n"
-        f"Please log in and change your password immediately.\n\n"
+        f"Please log in and change your password immediately. "
+        f"You will not be able to access the portal until you do.\n\n"
         f"Do not share this email."
     )
 
@@ -886,7 +1306,7 @@ def create_employer():
 
 
 # =====================================================
-# ADMIN: SHORTLIST APPLICATION  (no employer ownership check)
+# ADMIN: SHORTLIST APPLICATION
 # =====================================================
 @app.route("/admin/shortlist/<app_id>")
 @require_role("admin")
@@ -901,13 +1321,26 @@ def admin_shortlist(app_id):
         abort(404)
 
     db.applications.update_one({"_id": oid}, {"$set": {"status": "Shortlisted"}})
+
+    send_email(
+        app,
+        app_doc["user_email"],
+        "Congratulations! You've Been Shortlisted",
+        f"Dear {app_doc['user_name']},\n\n"
+        f"You have been shortlisted for the position of "
+        f"'{app_doc['job_title']}' at {app_doc['company']}.\n\n"
+        f"The employer will be in touch with you shortly.\n\n"
+        f"Best of luck!\n"
+        f"Recruitment Portal Team"
+    )
+
     add_log(db, session["user"], "ADMIN_APPLICATION_SHORTLISTED", request.remote_addr)
-    flash("Application shortlisted.")
+    flash("Application shortlisted and candidate notified.")
     return redirect("/admin#applications")
 
 
 # =====================================================
-# ADMIN: REJECT APPLICATION  (no employer ownership check)
+# ADMIN: REJECT APPLICATION
 # =====================================================
 @app.route("/admin/reject/<app_id>")
 @require_role("admin")
@@ -922,8 +1355,21 @@ def admin_reject(app_id):
         abort(404)
 
     db.applications.update_one({"_id": oid}, {"$set": {"status": "Rejected"}})
+
+    send_email(
+        app,
+        app_doc["user_email"],
+        f"Your Application at {app_doc['company']}",
+        f"Dear {app_doc['user_name']},\n\n"
+        f"Thank you for applying for '{app_doc['job_title']}' at {app_doc['company']}.\n\n"
+        f"After careful review, we will not be moving forward with your application at this time.\n\n"
+        f"We encourage you to apply for future openings.\n\n"
+        f"Best regards,\n"
+        f"Recruitment Portal Team"
+    )
+
     add_log(db, session["user"], "ADMIN_APPLICATION_REJECTED", request.remote_addr)
-    flash("Application rejected.")
+    flash("Application rejected and candidate notified.")
     return redirect("/admin#applications")
 
 
@@ -947,7 +1393,7 @@ def unblock_ip(ip_id):
 
 
 # =====================================================
-# ADMIN: DELETE USER  (cannot delete self or other admins)
+# ADMIN: DELETE USER
 # =====================================================
 @app.route("/admin/delete_user/<user_id>")
 @require_role("admin")
@@ -1007,5 +1453,6 @@ def not_found(e):
 # =====================================================
 if __name__ == "__main__":
     with app.app_context():
-        seed_admin()   # Idempotent — only runs if admin doesn't exist yet
+        ensure_indexes()
+        seed_admin()
     app.run(debug=False, use_reloader=False)

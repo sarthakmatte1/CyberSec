@@ -3,26 +3,29 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Verify OTP — TalentVault Recruitment Portal</title>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=Instrument+Sans:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<title>Verify OTP — Recruitment Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;1,500&family=Instrument+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   :root {
-    --bg:           #050c1a;
-    --surface:      rgba(8, 18, 38, 0.92);
-    --border:       rgba(56, 130, 210, 0.18);
-    --border-hover: rgba(56, 130, 210, 0.5);
-    --accent:       #2563EB;
-    --accent2:      #3B82F6;
-    --accent-glow:  rgba(37, 99, 235, 0.3);
-    --text:         #E2EAF8;
-    --text-muted:   rgba(160, 185, 225, 0.55);
-    --text-dim:     rgba(130, 160, 210, 0.4);
-    --danger-bg:    rgba(239, 68, 68, 0.08);
-    --danger-border:rgba(239, 68, 68, 0.25);
-    --input-bg:     rgba(255,255,255,0.03);
-    --input-focus:  rgba(37, 99, 235, 0.08);
+    --bg:        #F5F3EE;
+    --surface:   #FFFFFF;
+    --surface2:  #FAFAF8;
+    --border:    #E2DDD5;
+    --border-hi: #C8C0B4;
+    --text:      #1A1714;
+    --text-2:    #4A4540;
+    --text-3:    #857D75;
+    --text-4:    #B0A89E;
+    --blue:      #2563A8;
+    --green:     #1D7A56;
+    --amber:     #A05C1A;
+    --red:       #B83232;
+    --red-bg:    #FDF0F0;
+    --red-bd:    #EDB8B8;
+    --shadow:    0 2px 8px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.05);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,0.10), 0 2px 8px rgba(0,0,0,0.06);
   }
 
   body {
@@ -31,382 +34,285 @@
     align-items: center;
     justify-content: center;
     background: var(--bg);
-    font-family: 'Instrument Sans', 'Helvetica Neue', sans-serif;
+    font-family: 'Instrument Sans', sans-serif;
     padding: 2rem 1rem;
+    position: relative;
+  }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Ccircle cx='30' cy='30' r='0.5' fill='%23000' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none; z-index: 0;
+  }
+
+  .card {
+    position: relative; z-index: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    width: 100%;
+    max-width: 420px;
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+  }
+
+  /* Dark header */
+  .card-top {
+    background: var(--text);
+    padding: 28px 32px 26px;
     position: relative;
     overflow: hidden;
   }
-
-  /* ── Background ── */
-  .bg-noise {
-    position: fixed; inset: 0;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
-    pointer-events: none; z-index: 0;
-  }
-
-  .bg-grid {
-    position: fixed; inset: 0;
-    background-image:
-      linear-gradient(rgba(56,130,210,0.05) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(56,130,210,0.05) 1px, transparent 1px);
-    background-size: 40px 40px;
-    pointer-events: none; z-index: 0;
-  }
-
-  .bg-orb {
-    position: fixed; border-radius: 50%;
-    pointer-events: none; filter: blur(80px);
-  }
-  .orb1 {
-    width: 600px; height: 600px;
-    background: radial-gradient(circle, rgba(37,99,235,0.12) 0%, transparent 65%);
-    top: -200px; right: -150px;
-    animation: drift1 18s ease-in-out infinite alternate;
-  }
-  .orb2 {
-    width: 450px; height: 450px;
-    background: radial-gradient(circle, rgba(6,182,212,0.08) 0%, transparent 65%);
-    bottom: -100px; left: -100px;
-    animation: drift2 22s ease-in-out infinite alternate;
-  }
-
-  @keyframes drift1 { from { transform: translate(0,0); } to { transform: translate(40px,60px); } }
-  @keyframes drift2 { from { transform: translate(0,0); } to { transform: translate(-30px,-50px); } }
-
-  /* ── Card ── */
-  .card {
-    position: relative; z-index: 10;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 24px;
-    width: 100%;
-    max-width: 420px;
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    box-shadow: 0 0 0 1px var(--border),
-                0 40px 100px rgba(0,0,0,0.5),
-                0 0 60px var(--accent-glow);
-    overflow: hidden;
-    animation: cardIn 0.6s cubic-bezier(0.16,1,0.3,1) both;
-  }
-
-  @keyframes cardIn {
-    from { opacity: 0; transform: translateY(24px) scale(0.98); }
-    to   { opacity: 1; transform: translateY(0) scale(1); }
-  }
-
-  /* Top accent bar */
-  .card::before {
-    content: '';
-    display: block;
-    height: 2px;
-    background: linear-gradient(90deg, transparent, var(--accent), transparent);
-  }
-
-  .card-inner { padding: 2.5rem 2.25rem 2rem; }
-
-  /* ── Header ── */
-  .card-header {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    margin-bottom: 2rem;
-  }
-
-  .otp-icon-ring {
-    width: 64px; height: 64px;
-    border-radius: 50%;
-    background: rgba(37,99,235,0.1);
-    border: 1px solid rgba(37,99,235,0.3);
-    display: flex; align-items: center; justify-content: center;
-    margin-bottom: 1.25rem;
-    box-shadow: 0 0 30px rgba(37,99,235,0.2);
-    animation: pulse 3s ease-in-out infinite;
-  }
-
-  @keyframes pulse {
-    0%, 100% { box-shadow: 0 0 20px rgba(37,99,235,0.2); }
-    50%       { box-shadow: 0 0 40px rgba(37,99,235,0.4); }
-  }
-
-  .form-eyebrow {
-    font-size: 11px;
-    font-weight: 500;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--accent2);
-    margin-bottom: 6px;
-  }
-
-  .form-title {
-    font-family: 'Syne', sans-serif;
-    font-size: 26px;
-    font-weight: 700;
-    color: var(--text);
-    letter-spacing: -0.02em;
-    margin-bottom: 8px;
-  }
-
-  .form-sub {
-    font-size: 13px;
-    color: var(--text-muted);
-    line-height: 1.6;
-    font-style: italic;
-  }
-
-  /* ── Divider ── */
-  .divider {
-    height: 1px;
-    background: var(--border);
-    margin-bottom: 1.5rem;
-  }
-
-  /* ── Flash ── */
-  .flash {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    padding: 11px 14px;
-    border-radius: 10px;
-    font-size: 13px;
-    margin-bottom: 1.25rem;
-    line-height: 1.5;
-    animation: flashIn 0.3s ease;
-  }
-  @keyframes flashIn {
-    from { opacity: 0; transform: translateX(-6px); }
-    to   { opacity: 1; transform: translateX(0); }
-  }
-  .flash-error {
-    background: var(--danger-bg);
-    border: 1px solid var(--danger-border);
-    color: #FCA5A5;
-  }
-  .flash svg { flex-shrink: 0; margin-top: 1px; }
-
-  /* ── OTP input group ── */
-  .otp-label {
-    display: block;
-    font-size: 11.5px;
-    font-weight: 500;
-    color: var(--text-muted);
-    letter-spacing: 0.07em;
-    text-transform: uppercase;
-    margin-bottom: 10px;
-  }
-
-  /* Six individual digit boxes */
-  .otp-digits {
-    display: flex;
-    gap: 8px;
-    justify-content: center;
-    margin-bottom: 0.75rem;
-  }
-
-  .otp-digit {
-    width: 50px; height: 58px;
-    background: var(--input-bg);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    font-size: 22px;
-    font-family: 'Syne', monospace;
-    font-weight: 700;
-    color: var(--text);
-    text-align: center;
-    outline: none;
-    caret-color: var(--accent2);
-    transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
-    /* Hide the actual input value — we mirror it visually */
-  }
-
-  .otp-digit:focus {
-    border-color: rgba(56,130,210,0.6);
-    background: var(--input-focus);
-    box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
-  }
-
-  .otp-digit.filled {
-    border-color: rgba(37,99,235,0.5);
-    background: rgba(37,99,235,0.06);
-  }
-
-  /* Hidden real input (carries the full OTP value for form submission) */
-  #otp-hidden {
-    position: absolute;
-    opacity: 0;
-    pointer-events: none;
-    width: 1px; height: 1px;
-  }
-
-  /* ── Timer ── */
-  .otp-meta {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 1.25rem;
-    font-size: 12px;
-    color: var(--text-dim);
-  }
-
-  .timer {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    font-weight: 500;
-    color: var(--text-muted);
-  }
-
-  .timer.expiring { color: #FCA5A5; }
-
-  #timer-count {
-    font-family: 'Syne', monospace;
-    font-size: 13px;
-    min-width: 36px;
-  }
-
-  .attempts-left {
-    font-size: 12px;
-    color: var(--text-dim);
-  }
-
-  /* ── Hint ── */
-  .rate-hint {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 11.5px;
-    color: var(--text-dim);
-    margin-bottom: 0.5rem;
-  }
-
-  /* ── Submit ── */
-  .rp-btn {
-    width: 100%;
-    padding: 13px 20px;
-    background: linear-gradient(135deg, #1D4ED8 0%, #3B82F6 100%);
-    color: #fff;
-    border: none;
-    border-radius: 11px;
-    font-size: 14.5px;
-    font-weight: 600;
-    font-family: 'Syne', sans-serif;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    margin-top: 0.75rem;
-    box-shadow: 0 4px 24px rgba(37,99,235,0.35);
-    transition: transform 0.2s, box-shadow 0.2s;
-    letter-spacing: 0.02em;
-    position: relative; overflow: hidden;
-  }
-  .rp-btn::after {
+  .card-top::before {
     content: '';
     position: absolute; inset: 0;
-    background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent);
+    background-image:
+      repeating-linear-gradient(45deg,  rgba(255,255,255,0.015) 0, rgba(255,255,255,0.015) 1px, transparent 1px, transparent 48px),
+      repeating-linear-gradient(-45deg, rgba(255,255,255,0.015) 0, rgba(255,255,255,0.015) 1px, transparent 1px, transparent 48px);
     pointer-events: none;
   }
-  .rp-btn:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 8px 32px rgba(37,99,235,0.5);
+  .card-top::after {
+    content: '';
+    position: absolute;
+    width: 300px; height: 300px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(37,99,168,0.18) 0%, transparent 65%);
+    bottom: -110px; right: -80px;
+    pointer-events: none;
   }
-  .rp-btn:disabled {
-    opacity: 0.45;
-    cursor: not-allowed;
-    transform: none;
+  .card-top-inner { position: relative; z-index: 2; }
+
+  .brand {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 22px;
+  }
+  .brand-icon {
+    width: 36px; height: 36px;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .brand-name {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 15px; font-weight: 500;
+    color: rgba(255,255,255,0.9); line-height: 1.2;
+  }
+  .brand-name span {
+    display: block;
+    font-family: 'Instrument Sans', sans-serif;
+    font-size: 9.5px; font-weight: 600;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    color: rgba(255,255,255,0.35); margin-top: 2px;
   }
 
-  /* ── Footer ── */
+  .email-icon {
+    width: 42px; height: 42px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.13);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 14px;
+  }
+  .form-eyebrow {
+    font-size: 10px; font-weight: 700;
+    letter-spacing: 0.11em; text-transform: uppercase;
+    color: rgba(255,255,255,0.35); margin-bottom: 5px;
+  }
+  .form-title {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 28px; font-weight: 500;
+    color: #fff; line-height: 1.12; margin-bottom: 6px;
+  }
+  .form-sub {
+    font-size: 13px; font-weight: 300;
+    color: rgba(255,255,255,0.4); line-height: 1.65;
+  }
+  .form-sub strong { color: rgba(255,255,255,0.65); font-weight: 500; }
+
+  /* Body */
+  .card-inner { padding: 24px 32px 28px; }
+
+  .divider { height: 1px; background: var(--border); margin-bottom: 1.5rem; }
+
+  .flash {
+    display: flex; align-items: center; gap: 9px;
+    padding: 10px 14px; border-radius: 9px;
+    font-size: 13px; margin-bottom: 18px;
+    background: var(--red-bg); border: 1px solid var(--red-bd); color: var(--red);
+  }
+
+  .otp-label {
+    display: block;
+    font-size: 10.5px; font-weight: 700;
+    letter-spacing: 0.07em; text-transform: uppercase;
+    color: var(--text-4); margin-bottom: 10px;
+  }
+
+  /* Single OTP input — styled to look like a code field */
+  .otp-input-wrap { margin-bottom: 14px; }
+
+  .otp-input-wrap input[type="text"],
+  .otp-input-wrap input[type="number"],
+  .otp-input-wrap input {
+    width: 100%;
+    height: 54px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 22px;
+    font-family: 'Playfair Display', Georgia, serif;
+    font-weight: 500;
+    color: var(--text);
+    text-align: center;
+    letter-spacing: 0.35em;
+    outline: none;
+    caret-color: var(--blue);
+    transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+  }
+  .otp-input-wrap input:focus {
+    border-color: var(--border-hi);
+    box-shadow: 0 0 0 3px rgba(37,99,168,0.07);
+    background: var(--surface);
+  }
+
+  .otp-meta {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 12px; font-size: 12px; color: var(--text-4);
+  }
+  .timer {
+    display: flex; align-items: center; gap: 5px;
+    font-weight: 500; color: var(--text-3);
+  }
+  .timer.expiring { color: var(--red); }
+  #timer-count { font-size: 12.5px; font-weight: 600; color: var(--text-2); min-width: 34px; }
+  .attempts-left { font-size: 11.5px; color: var(--text-4); }
+
+  .rate-hint {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11.5px; color: var(--text-4);
+    padding: 9px 12px; margin-bottom: 18px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 7px; line-height: 1.5;
+  }
+  .rate-hint svg { flex-shrink: 0; }
+
+  .rp-btn {
+    width: 100%; padding: 11px 20px;
+    background: var(--text); color: #fff;
+    border: 1px solid var(--text); border-radius: 8px;
+    font-size: 14px; font-weight: 600;
+    font-family: 'Instrument Sans', sans-serif;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    box-shadow: var(--shadow);
+    transition: background 0.15s, box-shadow 0.15s, transform 0.15s;
+    letter-spacing: 0.01em;
+  }
+  .rp-btn:hover { background: #2d2520; box-shadow: 0 4px 16px rgba(0,0,0,0.18); transform: translateY(-1px); }
+  .rp-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+  .security-strip {
+    display: flex; align-items: center; justify-content: center; gap: 14px;
+    margin-top: 14px; padding: 9px 14px;
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+  }
+  .sec-badge {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 10.5px; font-weight: 600; color: var(--text-4); letter-spacing: 0.03em;
+  }
+  .sec-badge.green { color: var(--green); }
+  .sec-badge.blue  { color: var(--blue); }
+  .sec-badge.amber { color: var(--amber); }
+  .strip-sep { width: 1px; height: 13px; background: var(--border); flex-shrink: 0; }
+
   .rp-links {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 20px;
-    margin-top: 1.5rem;
-    padding-top: 1.25rem;
+    display: flex; align-items: center; justify-content: center;
+    gap: 8px 16px; flex-wrap: wrap;
+    margin-top: 1.5rem; padding-top: 1.25rem;
     border-top: 1px solid var(--border);
   }
   .rp-links a {
-    font-size: 12.5px;
-    color: var(--text-muted);
-    text-decoration: none;
-    font-weight: 500;
-    transition: color 0.2s;
+    font-size: 12.5px; color: var(--text-3);
+    text-decoration: none; transition: color 0.15s;
   }
-  .rp-links a:hover { color: var(--accent2); }
-  .rp-links .sep {
-    width: 3px; height: 3px;
-    border-radius: 50%;
-    background: var(--border);
+  .rp-links a:hover { color: var(--blue); }
+  .rp-links .sep { width: 1px; height: 12px; background: var(--border-hi); }
+
+  @media (max-width: 480px) {
+    .card-top, .card-inner { padding-left: 20px; padding-right: 20px; }
   }
 </style>
 </head>
 <body>
 
-  <div class="bg-noise"></div>
-  <div class="bg-grid"></div>
-  <div class="bg-orb orb1"></div>
-  <div class="bg-orb orb2"></div>
-
   <div class="card">
-    <div class="card-inner">
 
-      <!-- Header -->
-      <div class="card-header">
-        <div class="otp-icon-ring">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-            <rect x="2" y="4" width="20" height="16" rx="2.5" stroke="#60A5FA" stroke-width="1.8"/>
-            <path d="M2 7.5l8.586 5.586a2.5 2.5 0 002.828 0L22 7.5" stroke="#60A5FA" stroke-width="1.8" stroke-linecap="round"/>
+    <div class="card-top">
+      <div class="card-top-inner">
+        <div class="brand">
+          <div class="brand-icon">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+              <path d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.35C16.5 22.15 20 17.25 20 12V6L12 2z"
+                    fill="rgba(255,255,255,0.15)" stroke="white" stroke-width="1.4" stroke-linejoin="round"/>
+              <path d="M9 12l2 2 4-4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div class="brand-name">
+            Recruitment Portal
+            <span>Secure Hiring Platform</span>
+          </div>
+        </div>
+
+        <div class="email-icon">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none">
+            <rect x="2" y="4" width="20" height="16" rx="2.5" stroke="rgba(255,255,255,0.55)" stroke-width="1.8"/>
+            <path d="M2 7.5l8.586 5.586a2.5 2.5 0 002.828 0L22 7.5"
+                  stroke="rgba(255,255,255,0.55)" stroke-width="1.8" stroke-linecap="round"/>
           </svg>
         </div>
+
         <div class="form-eyebrow">Two-Factor Authentication</div>
-        <div class="form-title">Check Your Email</div>
-        <p class="form-sub">A 6-digit OTP was sent to your registered email.<br>It expires in <strong style="color:#93C5FD">5 minutes</strong>.</p>
+        <div class="form-title">Check your email.</div>
+        <p class="form-sub">A 6-digit OTP was sent to your registered email.<br>It expires in <strong>5 minutes</strong>.</p>
       </div>
+    </div>
+
+    <div class="card-inner">
 
       <div class="divider"></div>
 
-      <!-- Flash messages -->
       {% with messages = get_flashed_messages() %}
-        {% if messages %}
-          {% for msg in messages %}
-            <div class="flash flash-error">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-                <circle cx="12" cy="12" r="9" stroke="#EF4444" stroke-width="2"/>
-                <path d="M12 8v4M12 16h.01" stroke="#EF4444" stroke-width="2" stroke-linecap="round"/>
-              </svg>
-              {{ msg }}
-            </div>
-          {% endfor %}
-        {% endif %}
+        {% if messages %}{% for msg in messages %}
+          <div class="flash">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/>
+              <path d="M12 8v4M12 16h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+            {{ msg }}
+          </div>
+        {% endfor %}{% endif %}
       {% endwith %}
 
       <form method="POST" id="otp-form">
 
-        <!-- CSRF Token -->
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-        <!-- Hidden real OTP field submitted with the form -->
-        <input type="hidden" name="otp" id="otp-hidden">
 
         <label class="otp-label">Enter 6-Digit OTP</label>
 
-        <!-- Visual digit boxes -->
-        <div class="otp-digits" id="otp-digits">
-          <input class="otp-digit" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="one-time-code" aria-label="OTP digit 1">
-          <input class="otp-digit" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" aria-label="OTP digit 2">
-          <input class="otp-digit" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" aria-label="OTP digit 3">
-          <input class="otp-digit" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" aria-label="OTP digit 4">
-          <input class="otp-digit" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" aria-label="OTP digit 5">
-          <input class="otp-digit" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" aria-label="OTP digit 6">
+        <div class="otp-input-wrap">
+          <input type="text" name="otp" id="otp-digits"
+                 maxlength="6" inputmode="numeric" pattern="[0-9]{6}"
+                 autocomplete="one-time-code"
+                 placeholder="······"
+                 required>
         </div>
 
-        <!-- Timer + attempts -->
         <div class="otp-meta">
           <div class="timer" id="timer">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
               <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/>
               <path d="M12 7v5l3 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
             </svg>
@@ -424,15 +330,42 @@
         </div>
 
         <button type="submit" class="rp-btn" id="submit-btn">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
             <path d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.35C16.5 22.15 20 17.25 20 12V6L12 2z"
                   fill="rgba(255,255,255,0.2)" stroke="white" stroke-width="1.5" stroke-linejoin="round"/>
             <path d="M9 12l2 2 4-4" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
-          Verify & Continue
+          Verify &amp; Continue
         </button>
 
       </form>
+
+      <div class="security-strip">
+        <span class="sec-badge green">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.35C16.5 22.15 20 17.25 20 12V6L12 2z"
+                  stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+            <path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          OTP Verified
+        </span>
+        <div class="strip-sep"></div>
+        <span class="sec-badge blue">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none">
+            <rect x="3" y="11" width="18" height="11" rx="2" stroke="currentColor" stroke-width="2"/>
+            <path d="M7 11V7a5 5 0 0110 0v4" stroke="currentColor" stroke-width="2"/>
+          </svg>
+          CSRF Protected
+        </span>
+        <div class="strip-sep"></div>
+        <span class="sec-badge amber">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/>
+            <path d="M12 8v4M12 16h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          Rate Limited
+        </span>
+      </div>
 
       <div class="rp-links">
         <a href="/login">← Back to Login</a>
@@ -443,7 +376,7 @@
     </div>
   </div>
 
- <script src="{{ url_for('static', filename='js/otp-verification.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/otp-verification.js') }}"></script>
 
 </body>
 </html>
